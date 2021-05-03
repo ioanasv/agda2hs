@@ -18,6 +18,7 @@ open import Haskell.Prim.Applicative
 open import Haskell.Prim.Int
 open import Haskell.Prim.List
 open import Haskell.Prim.Integer
+open import Haskell.Prim.Integral
 open import Haskell.Prim.Tuple
 open import Haskell.Prim.Double
 open import Haskell.Prim.Bounded
@@ -32,10 +33,10 @@ record DiscreteOrdered (a : Set) : Set where
 
 open DiscreteOrdered ⦃ ... ⦄ public
 
-orderingToInteger : Ordering -> Integer
-orderingToInteger LT = intToInteger 0
-orderingToInteger EQ = intToInteger 1
-orderingToInteger GT = intToInteger 2
+-- orderingToInteger : Ordering -> Integer
+-- orderingToInteger LT = intToInteger 0
+-- orderingToInteger EQ = intToInteger 1
+-- orderingToInteger GT = intToInteger 2
 
 orderingFromInteger : Integer -> Ordering
 orderingFromInteger (pos 0) = LT
@@ -62,13 +63,13 @@ boundedBelowBool : (x : Bool) -> Maybe Bool
 boundedBelowBool x = if_then_else_ (x == false) Nothing (Just false)
 
 boundedAdjacentOrdering : (x y : Ordering) -> Bool
-boundedAdjacentOrdering x y = if_then_else_ (x < y && x < GT) ((orderingToInteger x) + (intToInteger 1) == (orderingToInteger y)) false
+boundedAdjacentOrdering x y = if_then_else_ (x < y && x < GT) ((fromEnum x) + 1 == (fromEnum y)) false
 
 boundedBelowOrdering : (x : Ordering) -> Maybe Ordering
-boundedBelowOrdering x = if_then_else_ (x == LT) Nothing (Just (orderingFromInteger ((orderingToInteger x) - (intToInteger 1))))
+boundedBelowOrdering x = if_then_else_ (x == LT) Nothing (Just (orderingFromInteger (toInteger ((fromEnum x) - 1))))
 
 boundedAdjacentChar : (x y : Char) -> Bool
-boundedAdjacentChar x y = if_then_else_ (x < y && x /= '\1114111') (((primCharToNat x) + 1) == primCharToNat y) false
+boundedAdjacentChar x y = if_then_else_ (x < y && x /= '\1114111') (((fromEnum x) + 1) == fromEnum y) false
 
 boundedBelowChar : (x : Char) -> Maybe Char
 boundedBelowChar x = if_then_else_ (x == '\0') Nothing (Just (primNatToChar (Nat._-_ (primCharToNat x) 1)))
@@ -83,7 +84,7 @@ boundedAdjacentInteger : (x y : Integer) -> Bool
 boundedAdjacentInteger x y = ((fromEnum x) + 1 == (fromEnum y))
 
 boundedBelowInteger : (x : Integer) -> Maybe Integer
-boundedBelowInteger x = Just (x - (intToInteger 1))
+boundedBelowInteger x = Just (x - (toInteger 1))
 
 constructTuple : ⦃ Ord a ⦄ → {{DiscreteOrdered b}} -> a -> Maybe b -> Maybe (a × b)
 constructTuple _ Nothing = Nothing
@@ -93,9 +94,9 @@ constructTriple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{DiscreteOrdered c}} -> a 
 constructTriple _ _ Nothing = Nothing
 constructTriple a b (Just value) = Just (a , b , value)
 
-constructQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} -> {{DiscreteOrdered d}} -> a -> b -> c -> Maybe d -> Maybe (a × b × c × d)
+constructQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} -> {{DiscreteOrdered d}} -> a -> b -> c -> Maybe d -> Maybe (Tuple (a ∷ b ∷ c ∷ d ∷ []))
 constructQuadtruple _ _ _ Nothing = Nothing
-constructQuadtruple a b c (Just value) = Just (a , b , c , value)
+constructQuadtruple a b c (Just value) = Just (a ∷ b ∷ c ∷ value ∷ [])
 
 instance
     isDiscreteOrderedBool : DiscreteOrdered Bool
@@ -134,9 +135,9 @@ instance
     isDiscreteOrderedTriple . adjacent (x1 , x2 , x3) (y1 , y2 , y3) = (x1 == y1) && (x2 == y2) && (adjacent x3 y3)
     isDiscreteOrderedTriple . adjacentBelow (x1 , x2 , x3) = constructTriple x1 x2 (adjacentBelow x3)
 
-    isDiscreteOrderedQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} → {{DiscreteOrdered d}} → DiscreteOrdered (a × b × c × d)
-    isDiscreteOrderedQuadtruple . adjacent (x1 , x2 , x3 , x4) (y1 , y2 , y3 , y4) = (x1 == y1) && (x2 == y2) && (x3 == y3) && (adjacent x4 y4)
-    isDiscreteOrderedQuadtruple . adjacentBelow (x1 , x2 , x3 , x4) = constructQuadtruple x1 x2 x3 (adjacentBelow x4)
+    isDiscreteOrderedQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} → {{DiscreteOrdered d}} → DiscreteOrdered (Tuple (a ∷ b ∷ c ∷ d ∷ []))
+    isDiscreteOrderedQuadtruple . adjacent (x1 ∷ x2 ∷ x3 ∷ x4 ∷ []) (y1 ∷ y2 ∷ y3 ∷ y4 ∷ []) = (x1 == y1) && (x2 == y2) && (x3 == y3) && (adjacent x4 y4)
+    isDiscreteOrderedQuadtruple . adjacentBelow (x1 ∷ x2 ∷ x3 ∷ x4 ∷ []) = constructQuadtruple x1 x2 x3 (adjacentBelow x4)
 
 data Boundary (a : Set) : Set where
     BoundaryAbove    : a -> Boundary a
