@@ -63,8 +63,8 @@ ex_float : Double
 ex_float = 0.0
 {-# COMPILE AGDA2HS ex_float #-}
 
-postulate
-  toInteger : Word → Integer
+-- postulate
+--   toInteger : Word → Integer
 
 ex_word : Word
 ex_word = fromInteger 0

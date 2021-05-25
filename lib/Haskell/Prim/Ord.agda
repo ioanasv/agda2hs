@@ -124,6 +124,15 @@ compareList []       (_ ∷ _)  = LT
 compareList (_ ∷ _)  []       = GT
 compareList (x ∷ xs) (y ∷ ys) = compare x y <> compareList xs ys
 
+sort : {{ Ord a }} -> List a -> List a 
+sort [] = []
+sort (x ∷ []) = x ∷ []
+sort {a} (x ∷ xs@(_ ∷ _)) = insert (sort xs)
+    where 
+      insert : List a -> List a 
+      insert [] = x ∷ []
+      insert (y ∷ ys) = if_then_else_ (x < y) (x ∷ y ∷ ys) (y ∷ (insert ys))
+      
 instance
   iOrdList : ⦃ Ord a ⦄ → Ord (List a)
   iOrdList = ordFromCompare compareList
