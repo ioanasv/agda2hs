@@ -128,6 +128,7 @@ unionWithEmptySet {{o}} {{dio}} rs1@(RS ranges@(h ∷ t)) {prf} =
 
 
 postulate
+  -- the following postulates hold when the boundaries are ordered
   emptyIntersection : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (b1 b2 b3 : Boundary a)
               -> IsFalse (rangeIsEmpty (rangeIntersection (Rg b2 b3) (Rg b1 b2)) == false)
 
@@ -135,7 +136,8 @@ postulate
               -> IsFalse (rangeIsEmpty (rangeIntersection (Rg b1 b2) (Rg b2 b3)) == false)           
    
   orderedBoundaries2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (b1 b2 : Boundary a)
-            -> IsFalse (b2 < b1)              
+            -> IsFalse (b2 < b1) 
+  -- used for easing the proofs, the true value should be IsTrue (b1 <= b2)                       
   orderedBoundaries3 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (b1 b2 : Boundary a)
             -> IsTrue (b1 < b2)               
          
