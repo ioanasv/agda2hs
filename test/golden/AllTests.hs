@@ -1,6 +1,8 @@
 module AllTests where
 
 import Issue14
+import Issue65
+import Fixities
 import LanguageConstructs
 import Numbers
 import Pragmas
@@ -9,4 +11,6 @@ import Test
 import Tuples
 import Where
 import TypeSynonyms
+import Datatypes
+import Records
 

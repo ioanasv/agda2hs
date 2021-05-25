@@ -112,11 +112,16 @@ hsQName :: QName -> TCM (Hs.QName ())
 hsQName f
   | Just x <- isSpecialName f = return x
   | otherwise = do
-    s <- showTCM f
-    return $
-      case break (== '.') $ reverse s of
-        (_, "")      -> Hs.UnQual () (hsName s)
-        (fr, _ : mr) -> Hs.Qual () (Hs.ModuleName () $ reverse mr) (hsName $ reverse fr)
+    isRecordConstructor f >>= \ case
+      Just (r, Record{ recNamedCon = False }) -> mkname r -- Use the record name if no named constructor
+      _                                       -> mkname f
+  where
+    mkname x = do
+      s <- showTCM x
+      return $
+        case break (== '.') $ reverse s of
+          (_, "")      -> Hs.UnQual () (hsName s)
+          (fr, _ : mr) -> Hs.Qual () (Hs.ModuleName () $ reverse mr) (hsName $ reverse fr)
 
 freshString :: String -> TCM String
 freshString s = freshName_ s >>= showTCM
@@ -343,16 +348,14 @@ tuplePat cons i ps = do
 
 -- Compiling things -------------------------------------------------------
 
-data CodeGen = YesCode | NoCode
+data RecordTarget = ToRecord | ToClass
 
 data ParsedPragma
   = NoPragma
   | DefaultPragma
-  | ClassPragma CodeGen
+  | ClassPragma
+  | ExistingClassPragma
   | DerivingPragma [Hs.Deriving ()]
-
-classes :: [String]
-classes = ["Show"]
 
 -- "class" is not being used usefully, any record with a pragma is
 -- considered a typeclass
@@ -363,10 +366,8 @@ classes = ["Show"]
 processPragma :: QName -> TCM ParsedPragma
 processPragma qn = getUniqueCompilerPragma pragmaName qn >>= \case
   Nothing -> return NoPragma
-  Just (CompilerPragma _ s) | s == "class" && s `elem` classes ->
-    return $ ClassPragma NoCode
-  Just (CompilerPragma _ s) | s == "class" ->
-    return $ ClassPragma YesCode
+  Just (CompilerPragma _ s) | s == "class"          -> return ClassPragma
+                            | s == "existing-class" -> return ExistingClassPragma
   Just (CompilerPragma _ s) | "deriving" `isPrefixOf` s ->
     -- parse a deriving clause for a datatype by tacking it onto a
     -- dummy datatype and then only keeping the deriving part
@@ -382,14 +383,15 @@ processPragma qn = getUniqueCompilerPragma pragmaName qn >>= \case
 compile :: Options -> ModuleEnv -> IsMain -> Definition -> TCM CompiledDef
 compile _ _ _ def = processPragma (defName def) >>= \ p ->
   case (p , defInstance def , theDef def) of
-    (NoPragma          , _      , _         ) -> return []
-    (ClassPragma _     , _      , _         ) -> return [] -- currently unused
-    (DerivingPragma ds , _      , Datatype{}) -> tag <$> compileData ds def
-    (DefaultPragma     , _      , Datatype{}) -> tag <$> compileData [] def
-    (DefaultPragma     , Just _ , _         ) -> tag <$> compileInstance def
-    (DefaultPragma     , _      , Axiom     ) -> tag <$> compilePostulate def
-    (DefaultPragma     , _      , Function{}) -> tag <$> compileFun def
-    (DefaultPragma     , _      , Record{}  ) -> tag <$> compileRecord def
+    (NoPragma           , _      , _         ) -> return []
+    (ExistingClassPragma, _      , _         ) -> return [] -- No code generation, but affects how projections are compiled
+    (ClassPragma        , _      , Record{}  ) -> tag <$> compileRecord ToClass def
+    (DerivingPragma ds  , _      , Datatype{}) -> tag <$> compileData ds def
+    (DefaultPragma      , _      , Datatype{}) -> tag <$> compileData [] def
+    (DefaultPragma      , Just _ , _         ) -> tag <$> compileInstance def
+    (DefaultPragma      , _      , Axiom     ) -> tag <$> compilePostulate def
+    (DefaultPragma      , _      , Function{}) -> tag <$> compileFun def
+    (DefaultPragma      , _      , Record{}  ) -> tag <$> compileRecord ToRecord def
     _                                         -> return []
   where tag code = [(nameBindingSite $ qnameName $ defName def, code)]
 
@@ -457,42 +459,68 @@ fieldArgInfo f = do
     badness = genericDocError =<< text "Not a record field:" <+> prettyTCM f
 
 
-compileRecord :: Definition -> TCM [Hs.Decl ()]
-compileRecord def = do
-  let r = hsName $ prettyShow $ qnameName $ defName def
-  TelV tel _ <- telViewUpTo (recPars (theDef def)) (defType def)
+compileRecord :: RecordTarget -> Definition -> TCM [Hs.Decl ()]
+compileRecord target def = setCurrentRange (nameBindingSite $ qnameName $ defName def) $ do
+  TelV tel _ <- telViewUpTo recPars (defType def)
   hd <- addContext tel $ do
     let params = teleArgs tel :: [Arg Term]
     pars <- mapM (showTCM . unArg) $ filter visible params
     return $ foldl (\ h p -> Hs.DHApp () h (Hs.UnkindedVar () $ hsName p))
-                   (Hs.DHead () r)
+                   (Hs.DHead () (hsName rName))
                    pars
-  let help :: Int -> [QName] -> Telescope -> TCM [Hs.ClassDecl ()]
-      help i ns tel = case (ns,splitTelescopeAt i tel) of
+  case target of
+    ToClass -> do
+      classDecls <- compileRecFields classDecl recPars (unDom <$> recFields) recTel
+      return [Hs.ClassDecl () Nothing hd [] (Just classDecls)]
+
+    ToRecord -> do
+      fieldDecls <- compileRecFields fieldDecl recPars (unDom <$> recFields) recTel
+      mapM_ checkFieldInScope (map unDom recFields)
+      let conDecl = Hs.QualConDecl () Nothing Nothing $ Hs.RecDecl () cName fieldDecls
+      return [Hs.DataDecl () (Hs.DataType ()) Nothing hd [conDecl] []]
+
+  where
+    rName = prettyShow $ qnameName $ defName def
+    cName | recNamedCon = hsName $ prettyShow $ qnameName $ conName recConHead
+          | otherwise   = hsName rName   -- Reuse record name for constructor if no given name
+
+    -- In Haskell, projections live in the same scope as the record type, so check here that the
+    -- record module has been opened.
+    checkFieldInScope f = hsQName f >>= \ case
+      Hs.UnQual{}  -> return ()
+      Hs.Special{} -> __IMPOSSIBLE__
+      Hs.Qual{}    -> setCurrentRange (nameBindingSite $ qnameName f) $ genericError $
+        "Record projections (`" ++ prettyShow (qnameName f) ++ "` in this case) must be brought into scope when compiling to Haskell record types. " ++
+        "Add `open " ++ rName ++ " public` after the record declaration to fix this."
+
+    Record{..} = theDef def
+
+    classDecl :: Hs.Name () -> Hs.Type () -> Hs.ClassDecl ()
+    classDecl n = Hs.ClsDecl () . Hs.TypeSig () [n]
+
+    fieldDecl :: Hs.Name () -> Hs.Type () -> Hs.FieldDecl ()
+    fieldDecl n = Hs.FieldDecl () [n]
+
+    compileRecFields :: (Hs.Name () -> Hs.Type () -> b)
+                     -> Int -> [QName] -> Telescope -> TCM [b]
+    compileRecFields decl i ns tel =
+      case (ns, splitTelescopeAt i tel) of
         (_     ,(_   ,EmptyTel      )) -> return []
-        ((n:ns),(tel',ExtendTel ty _)) -> do
-          ty  <- compileRecField tel' n (unDom ty)
-          tys <- help (i+1) ns tel
+        (n:ns,(tel',ExtendTel ty _)) -> do
+          ty  <- addContext tel' $
+                   compileType (unEl $ unDom ty)
+                   <&> decl (hsName $ prettyShow $ qnameName n)
+          tys <- compileRecFields decl (i+1) ns tel
           return (ty:tys)
         (_, _) -> __IMPOSSIBLE__
-  telBig <- getRecordFieldTypes (defName def)
-  let fieldNames = map unDom $ recFields (theDef def)
-  y <- help (recPars (theDef def)) fieldNames telBig
-  return [Hs.ClassDecl () Nothing hd [] (Just y)]
 
-compileRecField :: Telescope
-                -> QName
-                -> Type
-                -> TCM (Hs.ClassDecl ())
-compileRecField tel n ty = addContext tel $ do
-  hty <- compileType (unEl ty)
-  return $ Hs.ClsDecl () (Hs.TypeSig () [hsName $ prettyShow $ qnameName n] hty)
 
 compileData :: [Hs.Deriving ()] -> Definition -> TCM [Hs.Decl ()]
 compileData ds def = do
   let d = hsName $ prettyShow $ qnameName $ defName def
   case theDef def of
-    Datatype{dataPars = n, dataIxs = 0, dataCons = cs} -> do
+    Datatype{dataPars = n, dataIxs = numIxs, dataCons = cs} -> do
+      unless (numIxs == 0) $ genericDocError =<< text "Not supported: indexed datatypes"
       TelV tel _ <- telViewUpTo n (defType def)
       addContext tel $ do
         let params = teleArgs tel :: [Arg Term]
@@ -513,10 +541,14 @@ compileConstructor params c = do
 
 compileConstructorArgs :: Telescope -> TCM [Hs.Type ()]
 compileConstructorArgs EmptyTel = return []
-compileConstructorArgs (ExtendTel a tel)
-  | visible a, NoAbs _ tel <- reAbs tel = do
-    (:) <$> compileType (unEl $ unDom a) <*> compileConstructorArgs tel
-compileConstructorArgs tel = genericDocError =<< text "Bad constructor args:" <?> prettyTCM tel
+compileConstructorArgs (ExtendTel a tel) = case getHiding a of
+  -- Drop hidden arguments
+  Hidden -> underAbstraction a tel compileConstructorArgs
+  -- Compile visible constructor argument
+  -- TODO: check that there are no dependencies on this argument
+  NotHidden -> (:) <$> compileType (unEl $ unDom a)
+                   <*> underAbstraction a tel compileConstructorArgs
+  Instance{} -> genericDocError =<< text "Not supported: constructors with class constraints"
 
 compilePostulate :: Definition -> TCM [Hs.Decl ()]
 compilePostulate def = do
@@ -685,13 +717,18 @@ compileType t = do
 
 -- Exploits the fact that the name of the record type and the name of the record module are the
 -- same, including the unique name ids.
-isRecordFunction :: QName -> TCM Bool
-isRecordFunction q
+isClassFunction :: QName -> TCM Bool
+isClassFunction q
   | null $ mnameToList m = return False
   | otherwise            =
-    getConstInfo' (mnameToQName m) <&> \ case
-      Right Defn{theDef = Record{}} -> True
-      _                             -> False
+    getConstInfo' (mnameToQName m) >>= \ case
+      Right Defn{defName = r, theDef = Record{}} ->
+        -- It would be nicer if we remembered this from when we looked at the record the first time.
+        processPragma r <&> \ case
+          ClassPragma         -> True
+          ExistingClassPragma -> True
+          _                   -> False
+      _                             -> return False
   where
     m = qnameModule q
 
@@ -703,9 +740,7 @@ compileTerm v =
     -- args that need attention
     Def f es
       | Just semantics <- isSpecialTerm f -> semantics f es
-      | otherwise -> isRecordFunction f >>= \ case
-      -- v currently we assume all record projections are instance
-      -- args that need attention
+      | otherwise -> isClassFunction f >>= \ case
         True -> do
           -- v not sure why this fails to strip the name
           --f <- hsQName builtins (qualify_ (qnameName f))
@@ -713,7 +748,6 @@ compileTerm v =
           let uf = show (nameConcrete (qnameName f))
           (`appStrip` es) (hsVar uf)
         False -> (`app` es) . Hs.Var () =<< hsQName f
-    Con h ConORec es -> return $ hsVar "wibble"
     Con h i es
       | Just semantics <- isSpecialCon (conName h) -> semantics h i es
     Con h i es -> (`app` es) . Hs.Con () =<< hsQName (conName h)
@@ -734,6 +768,9 @@ compileTerm v =
           Hs.InfixApp _ a op b
             | a == hsx -> Hs.RightSection () op b -- System-inserted visible lambdas can only come from sections
           _            -> hsLambda x body         -- so we know x is not free in b.
+    Lam v b ->
+      -- Drop non-visible lambdas (#65)
+      underAbstraction_ b $ \ body -> compileTerm body
     t -> genericDocError =<< text "bad term:" <?> prettyTCM t
   where
     app :: Hs.Exp () -> Elims -> TCM (Hs.Exp ())
@@ -815,7 +852,7 @@ renderBlocks :: [Block] -> String
 renderBlocks = unlines . map unlines . sortRanges . filter (not . null . snd)
 
 defBlock :: CompiledDef -> [Block]
-defBlock def = [ (r, map pp ds) | (r, ds) <- def ]
+defBlock def = [ (r, map (pp . insertParens) ds) | (r, ds) <- def ]
 
 codePragmas :: [Ranged Code] -> [Block]
 codePragmas code = [ (r, map pp ps) | (r, (Hs.Module _ _ ps _ _, _)) <- code ]
