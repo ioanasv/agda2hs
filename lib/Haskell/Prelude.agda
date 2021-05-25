@@ -23,9 +23,11 @@ open Haskell.Prim public using ( TypeError; ⊥; iNumberNat; IsTrue; IsFalse;
 open import Haskell.Prim.Absurd      public
 open import Haskell.Prim.Applicative public
 open import Haskell.Prim.Bool        public
+open import Haskell.Prim.Char        public
 open import Haskell.Prim.Bounded     public
-open import Haskell.Prim.Boundaries  public
-open import Haskell.Prim.Ranges      public
+open import Haskell.RangedSets.Boundaries  public
+open import Haskell.RangedSets.Ranges      public
+open import Haskell.RangedSets.RangedSet   public
 open import Haskell.Prim.Double      public
 open import Haskell.Prim.Either      public
 open import Haskell.Prim.Enum        public
@@ -34,7 +36,7 @@ open import Haskell.Prim.Foldable    public
 open import Haskell.Prim.Functor     public
 open import Haskell.Prim.Int         public
 open import Haskell.Prim.Integer     public
-open import Haskell.Prim.Integral    public
+open import Haskell.Prim.Real        public
 open import Haskell.Prim.List        public
 open import Haskell.Prim.Maybe       public
 open import Haskell.Prim.Monad       public
