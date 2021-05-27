@@ -31,30 +31,12 @@ record DiscreteOrdered (a : Set) {{ _ : Ord a}} : Set where
         adjacent : a -> a -> Bool
         adjacentBelow : a -> Maybe a
 
-
 open DiscreteOrdered ⦃ ... ⦄ public
-{-# COMPILE AGDA2HS DiscreteOrdered #-}
--- orderingToInteger : Ordering -> Integer
--- orderingToInteger LT = intToInteger 0
--- orderingToInteger EQ = intToInteger 1
--- orderingToInteger GT = intToInteger 2
+{-# COMPILE AGDA2HS DiscreteOrdered class #-}
 
 orderingFromInt : Int -> Ordering
 orderingFromInt n = if_then_else_ (n == 0) LT (if_then_else_ (n == 1) EQ GT)
 {-# COMPILE AGDA2HS orderingFromInt #-}
-
-
--- boundedBelow : {{Ord a}} -> {{BoundedBelow a}} -> {{e : Enum a}} -> (x : a)
---      → {{ IfBoundedBelow (BoundedBelowEnum {{e}}) (IsFalse (fromEnum x == fromEnum minBound)) }} 
---      -> Maybe a
--- boundedBelow x  = if_then_else_ (x == minBound) Nothing (Just $ pred x)
-
--- boundedAdjacent : {{Ord a}} -> {{e : Enum a}} → (x : a) -> (y : a)
---      → {{ IfBoundedAbove (BoundedAboveEnum {{e}}) (IsFalse (fromEnum x == fromEnum maxBound)) }}  -> Bool
--- boundedAdjacent x y = if_then_else_ (x < y) (succ x == y) false
-
--- enumAdjacent : {{Ord a}} -> {{e : Enum a}} -> {{ IfBoundedAbove (BoundedAboveEnum {{e}}) (IsFalse (fromEnum a == fromEnum maxBound)) }} -> a -> a -> Bool
--- enumAdjacent x y = (succ x == y)
 
 boundedAdjacentBool : (x y : Bool) -> Bool
 boundedAdjacentBool x y = if_then_else_ (x < y) true false

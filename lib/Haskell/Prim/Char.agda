@@ -21,12 +21,3 @@ chr1 _ = '_'
 
 chr : Int -> Char 
 chr n = chr1 (toInteger n)
-
--- postulate
---   putStrLn : String -> IO ⊤
-
--- {-# FOREIGN GHC import qualified Data.Text.IO as Text #-}
--- {-# COMPILE GHC putStrLn = Text.putStrLn #-}
-
--- main : IO ⊤
--- main = putStrLn (helper (adjacent aa bb))

@@ -25,11 +25,13 @@ infixl 5 _-<=-_ _-<-_ _-?-_
 
 okAdjacent : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> Bool
 okAdjacent (Rg lower1 upper1) (Rg lower2 upper2) = lower1 <= upper1 && upper1 <= lower2 && lower2 <= upper2
+{-# COMPILE AGDA2HS okAdjacent #-}
 
 validRangeList : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> Bool
 validRangeList [] = true
 validRangeList (x ∷ []) = (rangeLower x) <= (rangeUpper x)
 validRangeList (x ∷ rs@(r1 ∷ rss)) = (okAdjacent x r1) && (validRangeList rs)
+{-# COMPILE AGDA2HS validRangeList #-}
 
 validBoundaryList : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Boundary a) -> Bool
 validBoundaryList [] = true
@@ -38,12 +40,15 @@ validBoundaryList (x ∷ rs@(r1 ∷ rss)) = (x <= r1) && (validBoundaryList rs)
 
 data RSet (a : Set) {{o : Ord a}} {{dio : DiscreteOrdered a}} : Set where
     RS :  (rg : List (Range a)) -> {.(IsTrue (validRangeList rg))} -> RSet a
+{-# COMPILE AGDA2HS RSet #-}
 
 rSetRanges : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> RSet a -> List (Range a)
 rSetRanges (RS ranges) = ranges
+{-# COMPILE AGDA2HS rSetRanges #-}
 
 overlap1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> Bool
 overlap1 (Rg _ upper1) (Rg lower2 _) = (upper1 >= lower2)
+{-# COMPILE AGDA2HS overlap1 #-}
 
 normalise : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> List (Range a)
 normalise (r1 ∷ r2 ∷ rs) = 
@@ -51,10 +56,12 @@ normalise (r1 ∷ r2 ∷ rs) =
       (normalise ((Rg (rangeLower r1) (max (rangeUpper r1) (rangeUpper r2))) ∷ rs)) 
          (r1 ∷ (normalise (r2 ∷ rs)))
 normalise rs = rs
+{-# COMPILE AGDA2HS normalise #-}
 
 normaliseRangeList : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> List (Range a)
 normaliseRangeList [] = []
 normaliseRangeList rs@(r1 ∷ rss) = normalise (sort (filter (λ r -> (rangeIsEmpty r) == false) rs))
+{-# COMPILE AGDA2HS normaliseRangeList #-}
 
 -- makeRangedSet : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> RSet a
 -- makeRangedSet rs = RS (normaliseRangeList rs)
@@ -62,6 +69,7 @@ normaliseRangeList rs@(r1 ∷ rss) = normalise (sort (filter (λ r -> (rangeIsEm
 unsafeRangedSet : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (rg : List (Range a)) 
    -> {IsTrue (validRangeList {{o}} {{dio}} rg)} -> RSet a
 unsafeRangedSet rs {prf}  = RS rs {prf}
+{-# COMPILE AGDA2HS unsafeRangedSet #-}
 
 ranges3 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> 
       Maybe (Boundary a) -> (Boundary a -> Boundary a) -> (Boundary a -> Maybe (Boundary a)) -> List (Range a)
@@ -72,34 +80,40 @@ ranges2 b upperFunc succFunc = (Rg b (upperFunc b)) ∷ (ranges3 (succFunc b) up
 
 ranges3 (Just b1) upperFunc succFunc = ranges2 b1 upperFunc succFunc
 ranges3 Nothing _ _ = []
+{-# COMPILE AGDA2HS ranges2 #-}
+{-# COMPILE AGDA2HS ranges3 #-}
 
 setBounds1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> (xs : List (Boundary a)) -> List (Boundary a)
 setBounds1 (BoundaryBelowAll ∷ xs) = xs 
 setBounds1 xs = (BoundaryBelowAll ∷ xs)
+{-# COMPILE AGDA2HS setBounds1 #-}
 
 bounds1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> List (Boundary a)
 bounds1 (r ∷ rs) = (rangeLower r) ∷ (rangeUpper r) ∷ (bounds1 rs)
 bounds1 _ = []
+{-# COMPILE AGDA2HS bounds1 #-}
 
 ranges1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Boundary a) -> List (Range a)
 ranges1 (b1 ∷ b2 ∷ bs) = (Rg b1 b2) ∷ (ranges1 bs)
 ranges1 (BoundaryAboveAll ∷ [])  = []
 ranges1 (b ∷ []) = (Rg b BoundaryAboveAll) ∷ []
 ranges1 _ = []
+{-# COMPILE AGDA2HS ranges1 #-}
 
 merge1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> List (Range a) -> List (Range a)
 merge1 [] [] = []
 merge1 ms1@(h1 ∷ t1) [] = ms1
 merge1 [] ms2@(h2 ∷ t2) = ms2
 merge1 ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) = if_then_else_ (h1 < h2) (h1 ∷ (merge1 t1 ms2)) (h2 ∷ (merge1 ms1 t2))
-      
+{-# COMPILE AGDA2HS merge1 #-}
+
 merge2 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> List (Range a) -> List (Range a)
 merge2 [] [] = []
 merge2 ms1@(h1 ∷ t1) [] = []
 merge2 [] ms2@(h2 ∷ t2) = []
 merge2 ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) = 
    (rangeIntersection h1 h2) ∷ (if_then_else_ (rangeUpper h1 < rangeUpper h2) (merge2 t1 ms2) (merge2 ms1 t2))
-
+{-# COMPILE AGDA2HS merge2 #-}
 
 postulate
 
@@ -393,38 +407,45 @@ singletonRangeValid x = subst IsTrue (sym (singletonRangeValid0 x)) IsTrue.itsTr
 
 rSingleton : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> a -> RSet a
 rSingleton {{o}} {{dio}} a = RS ((singletonRange a) ∷ []) {singletonRangeValid a}
+{-# COMPILE AGDA2HS rSingleton #-}
 
 rangesAreEmpty : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → List (Range a) -> Bool
 rangesAreEmpty [] = true 
 rangesAreEmpty (r ∷ rs) = (rangeIsEmpty r) && (rangesAreEmpty rs)
+{-# COMPILE AGDA2HS rangesAreEmpty #-}
 
 rSetIsEmpty : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> (rs : RSet a) -> Bool
 rSetIsEmpty {{o}} {{dio}} rset@(RS ranges) = rangesAreEmpty {{o}} {{dio}} ranges
+{-# COMPILE AGDA2HS rSetIsEmpty #-}
 
 rSetNegation : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rg : RSet a) -> {(IsTrue (validRangeList (rSetRanges rg)))} -> RSet a
 rSetNegation {{o}} {{dio}} set@(RS ranges) {prf} = 
    RS {{o}} {{dio}} (ranges1 {{o}} {{dio}} (setBounds1 {{o}} {{dio}} (bounds1 {{o}} {{dio}} ranges))) {negation set prf}
+{-# COMPILE AGDA2HS rSetNegation #-}
 
 rSetIsFull : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (rs : RSet a) 
       -> {IsTrue (validRangeList (rSetRanges rs))} -> Bool
 rSetIsFull set {prf} = rSetIsEmpty (rSetNegation set {prf}) 
+{-# COMPILE AGDA2HS rSetIsFull #-}
 
 rSetEmpty : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> RSet a
 rSetEmpty {{o}} {{dio}} = RS [] {empty {{o}} {{dio}}} 
+{-# COMPILE AGDA2HS rSetEmpty #-}
 
 rSetFull : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> RSet a
 rSetFull {{o}} {{dio}} = RS ((Rg BoundaryBelowAll BoundaryAboveAll) ∷ []) {full0 {{o}} {{dio}}}
+{-# COMPILE AGDA2HS rSetFull #-}
 
 rSetHas : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (rs : RSet a) -> a -> Bool
 rSetHas (RS []) _ = false
 rSetHas {{o}} {{dio}} (RS ls@(r ∷ [])) value = rangeHas {{o}} r value 
 rSetHas {{o}} {{dio}} (RS ls@(r ∷ rs)) value = or $ map (λ r -> (rangeHas {{o}} r value)) ls
--- rSetHas (RS ls@(r ∷ rs)) value = if_then_else_ (value />/ (rangeLower r)) ((rangeHas r value) || (rSetHas (RS rs) value)) false
+{-# COMPILE AGDA2HS rSetHas #-}
 
 _-?-_ : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (rs : RSet a) -> a -> Bool
 _-?-_ rs = rSetHas rs 
-
+{-# COMPILE AGDA2HS _-?-_ #-}
 
 negationHelper : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (rs : RSet a)
          -> {tr0 : IsTrue (validRangeList (rSetRanges rs))}
@@ -455,62 +476,66 @@ rSetUnion r1@(RS ls1@(h ∷ t)) r2@(RS []) = r1
 rSetUnion {{o}} {{dio}} r1@(RS []) r2@(RS []) = RS {{o}} {{dio}} [] {empty {{o}} {{dio}}}
 rSetUnion {{o}} {{dio}} r1@(RS ls1@(r0 ∷ rs1)) {prf1} r2@(RS ls2@(r ∷ rs2)) {prf2} = 
    RS {{o}} {{dio}} (normalise {{o}} {{dio}} (merge1 {{o}} {{dio}} ls1 ls2)) {unionn r1 r2 prf1 prf2}
+{-# COMPILE AGDA2HS rSetUnion #-}
 
 _-\/-_ : {{o : Ord a}} -> {{dio : DiscreteOrdered a}}
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> RSet a
 _-\/-_ rs1 {prf1} rs2 {prf2} = rSetUnion rs1 {prf1} rs2 {prf2}
+{-# COMPILE AGDA2HS _-\/-_ #-}
 
 rSetIntersection : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> RSet a
--- rSetIntersection {{o}} {{dio}} (RS []) (RS ls2@(h ∷ t)) = RS {{o}} {{dio}} [] {empty {{o}} {{dio}}}
--- rSetIntersection {{o}} {{dio}} (RS ls1@(h ∷ t)) (RS []) = RS {{o}} {{dio}} [] {empty {{o}} {{dio}}}
--- rSetIntersection {{o}} {{dio}} (RS []) (RS []) = RS {{o}} {{dio}} [] {empty {{o}} {{dio}}}
 rSetIntersection {{o}} {{dio}} rs1@(RS ls1) {prf1} rs2@(RS ls2) {prf2} =
     RS {{o}} {{dio}} 
       (filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 {{o}} {{dio}} ls1 ls2)) 
          {intersection0 rs1 rs2 prf1 prf2}
-
+{-# COMPILE AGDA2HS rSetIntersection #-}
 
 _-/\-_ : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> RSet a
 _-/\-_ rs1 {prf1} rs2 {prf2} = rSetIntersection rs1 {prf1} rs2 {prf2}
-
+{-# COMPILE AGDA2HS _-/\-_ #-}
 
 rSetDifference : {{o : Ord a}} -> {{dio : DiscreteOrdered a}}
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> RSet a
 rSetDifference {{o}} {{dio}} rs1 {prf1} rs2 {prf2} = 
    rSetIntersection rs1 {prf1} (rSetNegation rs2 {prf2}) {negation2 rs2 (negation rs2 prf2)}
+{-# COMPILE AGDA2HS rSetDifference #-}
 
 _-!-_ : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> RSet a
 _-!-_ rs1 {prf1} rs2 {prf2} = rSetDifference rs1 {prf1} rs2 {prf2}
-
+{-# COMPILE AGDA2HS _-!-_ #-}
 
 rSetIsSubset : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> Bool
 rSetIsSubset rs1 {prf1} rs2 {prf2} = rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})
+{-# COMPILE AGDA2HS rSetIsSubset #-}
 
 _-<=-_ : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> Bool
 _-<=-_ rs1 {prf1} rs2 {prf2}  = rSetIsSubset rs1 {prf1} rs2 {prf2} 
+{-# COMPILE AGDA2HS _-<=-_ #-}
 
 rSetIsSubsetStrict : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> Bool
 rSetIsSubsetStrict rs1 {prf1} rs2 {prf2} = rSetIsEmpty 
    (rSetDifference rs1 {prf1} rs2 {prf2}) && not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))
+{-# COMPILE AGDA2HS rSetIsSubsetStrict #-}
 
 _-<-_ : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} 
       -> (rs1 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs1))} 
       -> (rs2 : RSet a) -> {IsTrue (validRangeList (rSetRanges rs2))} -> Bool
 _-<-_ rs1 {prf1} rs2 {prf2} = rSetIsSubsetStrict rs1 {prf1} rs2 {prf2}
+{-# COMPILE AGDA2HS _-<-_ #-}
 
 -- instance 
 --     isRangedSetSemigroup : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> Semigroup (RSet a) 
@@ -529,7 +554,7 @@ postulate
 rSetUnfold : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> Boundary a 
    -> (Boundary a -> Boundary a) -> (Boundary a -> Maybe (Boundary a)) -> RSet a
 rSetUnfold {a} bound upperFunc succFunc = RS (normalise (ranges2 bound upperFunc succFunc)) {unfold bound upperFunc succFunc}
-
+{-# COMPILE AGDA2HS rSetUnfold #-}
 
 intersection3 {{o}} {{dio}} rs1@(RS ranges1@(r1 ∷ rss1)) rs2@(RS ranges2@(r2 ∷ rss2)) {{ne1}} {{ne2}} prf1 prf2 true = 
   begin
