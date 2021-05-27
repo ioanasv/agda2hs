@@ -1,5 +1,7 @@
 module Haskell.RangedSets.Ranges where
 
+import Haskell.RangedSets.Boundaries
+
 data Range a = Rg (Boundary a) (Boundary a)
 
 rangeLower :: Ord a => DiscreteOrdered a => Range a -> Boundary a

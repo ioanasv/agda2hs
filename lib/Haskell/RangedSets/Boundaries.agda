@@ -26,6 +26,10 @@ open import Haskell.Prim.Bounded
 
 open import Agda.Builtin.Char
 
+{-# FOREIGN AGDA2HS
+import Data.Ratio
+#-}
+
 record DiscreteOrdered (a : Set) {{ _ : Ord a}} : Set where
     field
         adjacent : a -> a -> Bool

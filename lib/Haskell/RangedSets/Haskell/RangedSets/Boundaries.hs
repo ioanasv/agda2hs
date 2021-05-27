@@ -1,5 +1,7 @@
 module Haskell.RangedSets.Boundaries where
 
+import Data.Ratio
+
 class DiscreteOrdered a where
     adjacent :: a -> a -> Bool
     adjacentBelow :: a -> Maybe a

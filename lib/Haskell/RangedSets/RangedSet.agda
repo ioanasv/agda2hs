@@ -19,9 +19,20 @@ open import Haskell.RangedSets.Boundaries
 open import Haskell.RangedSets.Ranges
 open import Haskell.RangedSetsProp.library
 
+{-# FOREIGN AGDA2HS
+import Haskell.RangedSets.Boundaries
+#-}
+{-# FOREIGN AGDA2HS
+import Haskell.RangedSets.Ranges
+#-}
+{-# FOREIGN AGDA2HS
+import Data.List
+#-}
+
 infixl 7 _-/\-_
 infixl 6 _-\/-_ _-!-_
 infixl 5 _-<=-_ _-<-_ _-?-_
+
 
 okAdjacent : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> Bool
 okAdjacent (Rg lower1 upper1) (Rg lower2 upper2) = lower1 <= upper1 && upper1 <= lower2 && lower2 <= upper2

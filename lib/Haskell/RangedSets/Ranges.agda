@@ -22,6 +22,10 @@ open import Haskell.Prim.Tuple
 
 open import Haskell.RangedSets.Boundaries
 
+{-# FOREIGN AGDA2HS
+import Haskell.RangedSets.Boundaries
+#-}
+
 data Range (a : Set) {{o : Ord a}} {{dio : DiscreteOrdered a}} : Set where
     Rg : Boundary a -> Boundary a -> Range a
 {-# COMPILE AGDA2HS Range #-}

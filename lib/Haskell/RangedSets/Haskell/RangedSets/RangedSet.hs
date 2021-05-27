@@ -1,5 +1,11 @@
 module Haskell.RangedSets.RangedSet where
 
+import Haskell.RangedSets.Boundaries
+
+import Haskell.RangedSets.Ranges
+
+import Data.List
+
 okAdjacent ::
              Ord a => DiscreteOrdered a => Range a -> Range a -> Bool
 okAdjacent (Rg lower1 upper1) (Rg lower2 upper2)
