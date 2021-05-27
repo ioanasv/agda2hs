@@ -56,11 +56,12 @@ open Show ⦃ ... ⦄ public
 
 {-# COMPILE AGDA2HS Show existing-class #-}
 
-private
-  makeShow : (a → String) → Show a
-  makeShow sh .showsPrec _ = showString ∘ sh
-  makeShow sh .showList    = defaultShowList (showString ∘ sh)
+makeShow : (a → String) → Show a
+makeShow sh .showsPrec _ = showString ∘ sh
+makeShow sh .showList    = defaultShowList (showString ∘ sh)
 
+private
+  
   makeShowsPrec : (Int → a → ShowS) → Show a
   makeShowsPrec shp .showsPrec = shp
   makeShowsPrec shp .showList = defaultShowList (shp 0)

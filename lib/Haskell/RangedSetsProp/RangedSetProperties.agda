@@ -165,7 +165,7 @@ lemma0 {{o}} {{dio}} rs@(RS (r@(Rg l u) ∷ rgs)) {prf} =
     =⟨⟩
       (ranges1 {{o}} {{dio}} (bounds1 {{o}} {{dio}} (r ∷ rgs)))
     =⟨⟩
-      (ranges1 {{o}} {{dio}} ((rangeLower {{dio}} r) ∷ ((rangeUpper {{dio}} r) ∷ (bounds1 {{o}} {{dio}} rgs))))
+      (ranges1 {{o}} {{dio}} ((rangeLower {{o}} {{dio}} r) ∷ ((rangeUpper {{o}} {{dio}} r) ∷ (bounds1 {{o}} {{dio}} rgs))))
     =⟨⟩
       ((Rg l u) ∷ ranges1 {{o}} {{dio}} (bounds1 {{o}} {{dio}} rgs))    
     =⟨⟩
@@ -491,9 +491,8 @@ merge2Empty2 {{o}} {{dio}} bounds@(b1 ∷ b2@(BoundaryBelow x) ∷ bs@(b3 ∷ bs
       []      
     end 
 
--- merge2Empty : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (bs : List (Boundary a)) -> {{ne : NonEmpty bs}}
-          -- -> filter (λ x -> rangeIsEmpty x == false) (merge2 (ranges1 (tail bs {{ne}})) (ranges1 bs)) ≡ []
-merge2Empty {{o}} {{dio}} bounds@(b ∷ []) {{ne}} = 
+
+merge2Empty {{o}} {{dio}} bounds@(b@(BoundaryBelowAll) ∷ []) {{ne}} = 
     begin
       filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 (tail bounds {{ne}})) (ranges1 bounds))
     =⟨⟩
@@ -505,6 +504,42 @@ merge2Empty {{o}} {{dio}} bounds@(b ∷ []) {{ne}} =
     =⟨⟩
       []      
     end
+merge2Empty {{o}} {{dio}} bounds@(b@(BoundaryBelow x) ∷ []) {{ne}} = 
+    begin
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 (tail bounds {{ne}})) (ranges1 bounds))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 []) (ranges1 (b ∷ [])))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 [] (ranges1 (b ∷ [])))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) []
+    =⟨⟩
+      []      
+    end 
+merge2Empty {{o}} {{dio}} bounds@(b@(BoundaryAbove x) ∷ []) {{ne}} = 
+    begin
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 (tail bounds {{ne}})) (ranges1 bounds))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 []) (ranges1 (b ∷ [])))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 [] (ranges1 (b ∷ [])))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) []
+    =⟨⟩
+      []      
+    end  
+merge2Empty {{o}} {{dio}} bounds@(b@(BoundaryAboveAll) ∷ []) {{ne}} = 
+    begin
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 (tail bounds {{ne}})) (ranges1 bounds))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 []) (ranges1 (b ∷ [])))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 [] (ranges1 (b ∷ [])))
+    =⟨⟩
+      filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) []
+    =⟨⟩
+      []      
+    end         
 merge2Empty {{o}} {{dio}} bounds@(b1 ∷ b2@(BoundaryAboveAll) ∷ []) {{ne}} = 
     begin
       filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 (ranges1 (tail bounds {{ne}})) (ranges1 bounds))
@@ -1045,7 +1080,7 @@ lemma2 {{o}} {{dio}} bs@(a@(BoundaryBelowAll) ∷ b@(BoundaryBelow x) ∷ []) =
     end   
 
 
-merge2' : {{Ord a}} -> {{DiscreteOrdered a}} -> List (Range a) -> List (Range a) -> List (Range a)
+merge2' : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> List (Range a) -> List (Range a) -> List (Range a)
 merge2' ms1 ms2 = merge2 ms2 ms1
 
 

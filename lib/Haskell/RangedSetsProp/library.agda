@@ -52,10 +52,10 @@ propIf2 true f = refl
 propIf3 : {{Ord a}} -> {x y : a} (c : Bool) -> IsFalse c -> (if c then x else y) ≡ y
 propIf3 false f = refl
 
-propIf2' : {{o : Ord a}} ->  {x y : List (Range a)} (c : Bool) -> IsTrue c -> (if c then x else y) ≡ x
+propIf2' : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} ->  {x y : List (Range a)} (c : Bool) -> IsTrue c -> (if c then x else y) ≡ x
 propIf2' true f = refl
 
-propIf3' : {{o : Ord a}} ->  {x y : List (Range a)} (c : Bool) -> IsFalse c -> (if c then x else y) ≡ y
+propIf3' : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} ->  {x y : List (Range a)} (c : Bool) -> IsFalse c -> (if c then x else y) ≡ y
 propIf3' false f = refl
 
 propIsFalse : (x : Bool) -> IsFalse x -> x ≡ false 

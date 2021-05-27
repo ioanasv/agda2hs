@@ -26,7 +26,7 @@ open import Haskell.Prim.Bounded
 
 open import Agda.Builtin.Char
 
-record DiscreteOrdered (a : Set) : Set where
+record DiscreteOrdered (a : Set) {{ _ : Ord a}} : Set where
     field
         adjacent : a -> a -> Bool
         adjacentBelow : a -> Maybe a
@@ -96,17 +96,18 @@ boundedBelowInteger : (x : Integer) -> Maybe Integer
 boundedBelowInteger x = Just (x - (toInteger 1))
 {-# COMPILE AGDA2HS boundedBelowInteger #-}
 
-constructTuple : ⦃ Ord a ⦄ → {{DiscreteOrdered b}} -> a -> Maybe b -> Maybe (a × b)
+constructTuple : ⦃ o : Ord a ⦄ -> {{ o2 : Ord b }} → {{DiscreteOrdered b {{o2}}}} -> a -> Maybe b -> Maybe (a × b)
 constructTuple _ Nothing = Nothing
 constructTuple a (Just value) = Just (a , value)
 {-# COMPILE AGDA2HS constructTuple #-}
 
-constructTriple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{DiscreteOrdered c}} -> a -> b -> Maybe c -> Maybe (a × b × c)
+constructTriple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ o : Ord c }} -> {{DiscreteOrdered c {{o}}}} -> a -> b -> Maybe c -> Maybe (a × b × c)
 constructTriple _ _ Nothing = Nothing
 constructTriple a b (Just value) = Just (a , b , value)
 {-# COMPILE AGDA2HS constructTriple #-}
 
-constructQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} -> {{DiscreteOrdered d}} -> a -> b -> c -> Maybe d -> Maybe (Tuple (a ∷ b ∷ c ∷ d ∷ []))
+constructQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} -> {{o : Ord d}} -> {{DiscreteOrdered d {{o}}}} 
+                        -> a -> b -> c -> Maybe d -> Maybe (Tuple (a ∷ b ∷ c ∷ d ∷ []))
 constructQuadtruple _ _ _ Nothing = Nothing
 constructQuadtruple a b c (Just value) = Just (a ∷ b ∷ c ∷ value ∷ [])
 {-# COMPILE AGDA2HS constructQuadtruple #-}
@@ -148,43 +149,47 @@ instance
 {-# COMPILE AGDA2HS isDiscreteOrderedDouble #-}
 
 instance
-    isDiscreteOrderedList : ⦃ Ord a ⦄ → DiscreteOrdered (List a)
+    isDiscreteOrderedList : ⦃ o : Ord a ⦄ -> {{ol : Ord (List a)}} → DiscreteOrdered (List a) {{ol}}
     isDiscreteOrderedList . adjacent x y = false
     isDiscreteOrderedList . adjacentBelow x = Nothing
 {-# COMPILE AGDA2HS isDiscreteOrderedList #-}
 
 instance
-    isDiscreteOrderedRatio : ⦃ Integral a ⦄ → DiscreteOrdered (Ratio a)
+    isDiscreteOrderedRatio : {{o : Ord a}} -> ⦃ Integral a ⦄ -> {{or : Ord (Ratio a)}} → DiscreteOrdered (Ratio a) {{or}}
     isDiscreteOrderedRatio . adjacent x y = false
     isDiscreteOrderedRatio . adjacentBelow x = Nothing
 {-# COMPILE AGDA2HS isDiscreteOrderedRatio #-}
 
+
 instance
-    isDiscreteOrderedTuple : ⦃ Ord a ⦄ → {{DiscreteOrdered b}} → DiscreteOrdered (a × b)
+    isDiscreteOrderedTuple : ⦃ Ord a ⦄ -> {{ o : Ord b }} → {{DiscreteOrdered b {{o}}}} 
+                            -> {{ot : Ord (a × b)}} → DiscreteOrdered (a × b) {{ot}}
     isDiscreteOrderedTuple . adjacent (x1 , x2) (y1 , y2) = (x1 == y1) && (adjacent x2 y2)
     isDiscreteOrderedTuple . adjacentBelow (x1 , x2) = constructTuple x1 (adjacentBelow x2)
 {-# COMPILE AGDA2HS isDiscreteOrderedTuple #-}
 
 instance
-    isDiscreteOrderedTriple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ → {{DiscreteOrdered c}} → DiscreteOrdered (a × b × c)
+    isDiscreteOrderedTriple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{o : Ord c}} → {{DiscreteOrdered c {{o}}}} 
+                                -> {{ot : Ord (a × b × c)}} → DiscreteOrdered (a × b × c) {{ot}}
     isDiscreteOrderedTriple . adjacent (x1 , x2 , x3) (y1 , y2 , y3) = (x1 == y1) && (x2 == y2) && (adjacent x3 y3)
     isDiscreteOrderedTriple . adjacentBelow (x1 , x2 , x3) = constructTriple x1 x2 (adjacentBelow x3)
 {-# COMPILE AGDA2HS isDiscreteOrderedTriple #-}
 
 instance
-    isDiscreteOrderedQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} → {{DiscreteOrdered d}} → DiscreteOrdered (Tuple (a ∷ b ∷ c ∷ d ∷ []))
+    isDiscreteOrderedQuadtruple : ⦃ Ord a ⦄ → ⦃ Ord b ⦄ -> {{ Ord c }} -> {{o : Ord d}} → {{DiscreteOrdered d {{o}}}} ->
+                                   {{ot : Ord (Tuple (a ∷ b ∷ c ∷ d ∷ []))}}  → DiscreteOrdered (Tuple (a ∷ b ∷ c ∷ d ∷ [])) {{ot}}
     isDiscreteOrderedQuadtruple . adjacent (x1 ∷ x2 ∷ x3 ∷ x4 ∷ []) (y1 ∷ y2 ∷ y3 ∷ y4 ∷ []) = (x1 == y1) && (x2 == y2) && (x3 == y3) && (adjacent x4 y4)
     isDiscreteOrderedQuadtruple . adjacentBelow (x1 ∷ x2 ∷ x3 ∷ x4 ∷ []) = constructQuadtruple x1 x2 x3 (adjacentBelow x4)
 {-# COMPILE AGDA2HS isDiscreteOrderedQuadtruple #-}
 
-data Boundary (a : Set) : Set where
+data Boundary (a : Set) {{ b : Ord a}} {{ _ : DiscreteOrdered a {{b}} }} : Set where
     BoundaryAbove    : a -> Boundary a
     BoundaryBelow    : a -> Boundary a
     BoundaryAboveAll : Boundary a
     BoundaryBelowAll : Boundary a
 {-# COMPILE AGDA2HS Boundary #-}
 
-above : {{ Ord a }} -> Boundary a -> a -> Bool
+above : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> Boundary a {{o}} -> a -> Bool
 above (BoundaryAbove b) a    = a > b
 above (BoundaryBelow b) a    = a >= b
 above BoundaryAboveAll _     = false
@@ -192,7 +197,7 @@ above BoundaryBelowAll _     = true
 {-# COMPILE AGDA2HS above #-}
 
 infixr 4 _/>/_
-_/>/_ : {{ Ord a }} -> a -> Boundary a -> Bool
+_/>/_ : {{ o : Ord a }} -> {{dio : DiscreteOrdered a}} -> a -> Boundary a {{o}} -> Bool
 _/>/_ x (BoundaryAbove b) = x > b
 _/>/_ x (BoundaryBelow b) = x >= b
 _/>/_ _ BoundaryAboveAll = false
@@ -200,7 +205,7 @@ _/>/_ _ BoundaryBelowAll = true
 {-# COMPILE AGDA2HS _/>/_ #-}
 
 instance
-    isBoundaryEq : ⦃ Ord a ⦄ -> ⦃ DiscreteOrdered a ⦄ → Eq (Boundary a)
+    isBoundaryEq : ⦃ o : Ord a ⦄ -> ⦃ dio : DiscreteOrdered a ⦄ → Eq (Boundary a)
     isBoundaryEq . _==_ (BoundaryAbove b1) (BoundaryAbove b2) = (b1 == b2)
     isBoundaryEq . _==_ (BoundaryAbove b1) (BoundaryBelow b2) = if_then_else_ (b1 < b2 && (adjacent b1 b2)) true false
     isBoundaryEq . _==_ (BoundaryBelow b1) (BoundaryBelow b2) = (b1 == b2)
@@ -211,7 +216,7 @@ instance
 {-# COMPILE AGDA2HS isBoundaryEq #-}
 
 instance
-    isBoundaryOrd : ⦃ Ord a ⦄ -> ⦃ DiscreteOrdered a ⦄ → Ord (Boundary a)
+    isBoundaryOrd : ⦃ o : Ord a ⦄ -> ⦃ dio : DiscreteOrdered a ⦄ → Ord (Boundary a)
     isBoundaryOrd . compare (BoundaryAbove b1) (BoundaryAbove b2) = compare b1 b2
     isBoundaryOrd . compare (BoundaryAbove b1) (BoundaryBelow b2) = if_then_else_ (b1 < b2) (if_then_else_ (adjacent b1 b2) EQ LT) GT
     isBoundaryOrd . compare (BoundaryAbove b1) BoundaryAboveAll = LT

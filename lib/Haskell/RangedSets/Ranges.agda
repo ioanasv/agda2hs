@@ -22,24 +22,24 @@ open import Haskell.Prim.Tuple
 
 open import Haskell.RangedSets.Boundaries
 
-data Range (a : Set) : Set where
+data Range (a : Set) {{o : Ord a}} {{dio : DiscreteOrdered a}} : Set where
     Rg : Boundary a -> Boundary a -> Range a
 
-rangeLower : {{dio : DiscreteOrdered a}} -> Range a -> Boundary a 
-rangeLower (Rg x y) = x
+rangeLower : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> Range a -> Boundary a 
+rangeLower {{o}} {{dio}} (Rg x y) = x
 
-rangeUpper : {{dio : DiscreteOrdered a}} -> Range a -> Boundary a
-rangeUpper (Rg x y) = y
+rangeUpper : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> Range a -> Boundary a
+rangeUpper {{o}} {{dio}} (Rg x y) = y
 
-rangeIsEmpty : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Bool
+rangeIsEmpty : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Bool
 rangeIsEmpty r@(Rg lower upper) = upper <= lower
 
 instance
-    isRangeEq : ⦃ Ord a ⦄ -> ⦃ DiscreteOrdered a ⦄ → Eq (Range a)
+    isRangeEq : ⦃ o : Ord a ⦄ -> ⦃ dio : DiscreteOrdered a ⦄ → Eq (Range a)
     isRangeEq . _==_ r1 r2 = (rangeIsEmpty r1 && rangeIsEmpty r2) || (rangeLower r1 == rangeLower r2 && rangeUpper r1 == rangeUpper r2)
 
 instance
-    isRangeOrd : ⦃ Ord a ⦄ -> ⦃ DiscreteOrdered a ⦄ → Ord (Range a)
+    isRangeOrd : ⦃ o : Ord a ⦄ -> ⦃ dio : DiscreteOrdered a ⦄ → Ord (Range a)
     isRangeOrd . compare r1 r2 = if_then_else_ (r1 == r2) EQ 
                         (if_then_else_ (rangeIsEmpty r1) LT (if_then_else_ (rangeIsEmpty r2) GT 
                         (compare (rangeLower r1) (rangeUpper r1) <> compare (rangeLower r2) (rangeUpper r2))))
@@ -51,23 +51,23 @@ instance
     isRangeOrd .min x y = if (compare x y == LT) then x else y
 
 -- | The empty range
-emptyRange : {{Ord a}} -> {{ DiscreteOrdered a }} -> Range a
+emptyRange : {{ o : Ord a}} -> {{ dio : DiscreteOrdered a }} -> Range a
 emptyRange = Rg BoundaryAboveAll BoundaryBelowAll
 
 -- | True if the value is within the range.
-rangeHas : {{ Ord a }} -> Range a -> a -> Bool
+rangeHas : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> a -> Bool
 rangeHas r@(Rg b1 b2) v = (v />/ b1) && not (v />/ b2)
 
-rangeHas1 : {{ Ord a }} -> a -> Range a -> Bool
+rangeHas1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> a -> Range a -> Bool
 rangeHas1 v r@(Rg b1 b2) = (v />/ b1) && not (v />/ b2)
 
 -- | True if the value is within one of the ranges.
-rangeListHas : {{ Ord a }} -> List (Range a) -> a -> Bool
+rangeListHas : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> List (Range a) -> a -> Bool
 rangeListHas (r@(Rg _ _) ∷ []) v = rangeHas r v
 rangeListHas (r1@(Rg _ _) ∷ r2@(Rg _ _) ∷ []) v = (rangeHas r1 v) || (rangeHas r2 v)
 rangeListHas ls v = or $ map (\r -> rangeHas r v) ls
 
-rangeListHas1 : {{ Ord a }} -> a -> List (Range a) -> Bool
+rangeListHas1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> a -> List (Range a) -> Bool
 rangeListHas1 v (r@(Rg _ _) ∷ []) = rangeHas r v
 rangeListHas1 v (r1@(Rg _ _) ∷ r2@(Rg _ _) ∷ []) = (rangeHas r1 v) || (rangeHas r2 v)
 rangeListHas1 v ls = or $ map (\r -> rangeHas r v) ls
@@ -77,43 +77,43 @@ fullRange : {{o : Ord a}} -> {{ dio : DiscreteOrdered a }} -> Range a
 fullRange {{o}} {{dio}} = Rg BoundaryBelowAll BoundaryAboveAll
 
 -- | A range containing a single value
-singletonRange : {{ DiscreteOrdered a }} -> a -> Range a
+singletonRange : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> a -> Range a
 singletonRange v = Rg (BoundaryBelow v) (BoundaryAbove v)
 
 -- | A range is full if it contains every possible value.
-rangeIsFull : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Bool
+rangeIsFull : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Bool
 rangeIsFull range = (range == fullRange)
 
 -- | Two ranges overlap if their intersection is non-empty.
-rangeOverlap : {{Ord a}} -> {{ DiscreteOrdered a }} -> Range a -> Range a -> Bool
+rangeOverlap : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> Bool
 rangeOverlap r1 r2 =
    not (rangeIsEmpty r1) && not (rangeIsEmpty r2) && not (rangeUpper r1 <= rangeLower r2 || rangeUpper r2 <= rangeLower r1)
 
 -- | The first range encloses the second if every value in the second range is
 -- also within the first range.  If the second range is empty then this is
 -- always true.
-rangeEncloses : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Range a -> Bool
+rangeEncloses : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> Bool
 rangeEncloses r1 r2 =
    (rangeLower r1 <= rangeLower r2 && rangeUpper r2 <= rangeUpper r1)
    || rangeIsEmpty r2
 
-rangeIntersection : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Range a -> Range a
+rangeIntersection : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> Range a
 rangeIntersection (Rg l1 u1) (Rg l2 u2) = if_then_else_ (rangeIsEmpty (Rg l1 u1) || rangeIsEmpty (Rg l2 u2)) emptyRange (Rg (max l1 l2) (min u1 u2))
 
-rangeU2 : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
+rangeU2 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
 rangeU2 r1@(Rg l1 u1) r2@(Rg l2 u2) = (if_then_else_ touching ((Rg lower upper) ∷ []) (r1 ∷ r2 ∷ []))
    where
      touching = (max l1 l2) <= (min u1 u2)
      lower = min l1 l2
      upper = max u1 u2
 
-rangeU1 : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
+rangeU1 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
 rangeU1 r1@(Rg l1 u1) r2@(Rg l2 u2) = if_then_else_ (rangeIsEmpty r2) (r1 ∷ []) (rangeU2 r1 r2)
 
-rangeUnion : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
+rangeUnion : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
 rangeUnion r1@(Rg l1 u1) r2@(Rg l2 u2) = if_then_else_ (rangeIsEmpty r1) (r2 ∷ []) (rangeU1 r1 r2)
 
-rangeDifference : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
+rangeDifference : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Range a -> List (Range a)
 rangeDifference (Rg lower1 upper1) (Rg lower2 upper2) = if_then_else_ intersects filtered (r1 ∷ [])
    where
       intersects = ((max lower1 lower2) < (min upper1 upper2))
@@ -121,7 +121,7 @@ rangeDifference (Rg lower1 upper1) (Rg lower2 upper2) = if_then_else_ intersects
       list = ((Rg lower1 lower2) ∷ (Rg upper2 upper1) ∷ [])
       filtered = filter (λ x -> (rangeIsEmpty x) == false) list
 
-rangeSingletonValue : {{ Ord a }} -> {{ DiscreteOrdered a }} -> Range a -> Maybe a
+rangeSingletonValue : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> Range a -> Maybe a
 rangeSingletonValue (Rg (BoundaryBelow v1) (BoundaryBelow v2)) = if_then_else_ (adjacent v1 v2) (Just v1) Nothing
 rangeSingletonValue (Rg (BoundaryBelow v1) (BoundaryAbove v2)) = if_then_else_ (v1 == v2) (Just v1) Nothing
 rangeSingletonValue (Rg (BoundaryAbove v1) (BoundaryBelow v2)) = adjacentBelow v2 >>= λ x → adjacentBelow x >>= λ y -> if_then_else_ (v1 == y) (return x) Nothing
@@ -129,25 +129,27 @@ rangeSingletonValue (Rg (BoundaryAbove v1) (BoundaryAbove v2)) = if_then_else_ (
 rangeSingletonValue (Rg _ _) = Nothing
 
 
--- h : {{Show a}} -> Boundary a -> String
--- h BoundaryBelowAll = ""
--- h (BoundaryBelow x) = show x ++ " <= "
--- h (BoundaryAbove x) = show x ++ " < "
--- h BoundaryAboveAll = "show Range: lower bound is BoundaryAboveAll"
+h : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> {{Show a}} -> Boundary a -> String
+h BoundaryBelowAll = ""
+h (BoundaryBelow x) = show x ++ " <= "
+h (BoundaryAbove x) = show x ++ " < "
+h BoundaryAboveAll = "show Range: lower bound is BoundaryAboveAll"
 
--- h2 : {{Show a}} -> Boundary a -> String
--- h2 BoundaryBelowAll = "show Range: upper bound is BoundaryBelowAll"
--- h2 (BoundaryBelow x) = " < " ++ show x
--- h2 (BoundaryAbove x) = " <= " ++ show x
--- h2 BoundaryAboveAll = ""
+h2 : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a }} -> {{Show a}} -> Boundary a -> String
+h2 BoundaryBelowAll = "show Range: upper bound is BoundaryBelowAll"
+h2 (BoundaryBelow x) = " < " ++ show x
+h2 (BoundaryAbove x) = " <= " ++ show x
+h2 BoundaryAboveAll = ""
 
--- showHelper : ⦃ Show a ⦄ -> {{ Ord a }} -> ⦃ DiscreteOrdered a ⦄ → Range a -> Maybe a -> String
--- showHelper r (Just v) = "x == " ++ show v
--- showHelper r Nothing = lowerBound ++ "x" ++ upperBound
---          where 
---             lowerBound = h (rangeLower r)
---             upperBound = h2 (rangeUpper r)
+showHelper : ⦃ Show a ⦄ -> {{ o : Ord a }} -> ⦃ dio : DiscreteOrdered a ⦄ → Range a -> Maybe a -> String
+showHelper r (Just v) = "x == " ++ show v
+showHelper r Nothing = lowerBound ++ "x" ++ upperBound
+         where 
+            lowerBound = h (rangeLower r)
+            upperBound = h2 (rangeUpper r)
+showHelper2 : ⦃ Show a ⦄ -> {{ o : Ord a }} -> ⦃ dio : DiscreteOrdered a ⦄ → Range a -> String 
+showHelper2 r = if_then_else_ (rangeIsEmpty r) "Empty" (if_then_else_ (rangeIsFull r) "All x" (showHelper r (rangeSingletonValue r)))
 
--- instance
---    isRangeShow : ⦃ Show a ⦄ -> ⦃ DiscreteOrdered a ⦄ → Show (Range a)
---    isRangeShow . show r = if_then_else_ (rangeIsEmpty r) "Empty" (if_then_else_ (rangeIsFull r) "All x" (showHelper r (rangeSingletonValue r)))
+instance
+   isRangeShow : ⦃ Show a ⦄ -> ⦃ o : Ord a ⦄ -> ⦃ dio : DiscreteOrdered a ⦄ → Show (Range a)
+   isRangeShow = makeShow showHelper2
