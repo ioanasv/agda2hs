@@ -19,6 +19,29 @@ open import Haskell.RangedSets.Boundaries
 open import Haskell.RangedSets.Ranges
 
 
+postulate
+  prop_max_sym : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a}} -> (r1 : Boundary a) -> (r2 : Boundary a) -> max r1 r2 ≡ max r2 r1 
+  prop_min_sym : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a}} -> (r1 : Boundary a) -> (r2 : Boundary a) -> min r1 r2 ≡ min r2 r1 
+  prop_range_creation : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a}} -> {r1 r2 : Boundary a} ->  
+                        {r3 r4 : Boundary a} -> (r1 ≡ r3) -> (r2 ≡ r4) -> (Rg r1 r2) ≡ Rg r3 r4
+
+prop_intersection_sym : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a}} -> (r1 : Range a) -> (r2 : Range a) -> 
+                        rangeIntersection r1 r2 ≡ rangeIntersection r2 r1
+prop_intersection_sym {{o}} {{dio}} r1@(Rg l1 u1) r2@(Rg l2 u2) = 
+   begin
+      rangeIntersection r1 r2
+     =⟨⟩ 
+      if_then_else_ (rangeIsEmpty r1 || rangeIsEmpty r2) emptyRange (Rg (max l1 l2) (min u1 u2))
+     =⟨ cong (ifThenElseHelper emptyRange (Rg (max l1 l2) (min u1 u2))) (prop_or_sym (rangeIsEmpty r1) (rangeIsEmpty r2)) ⟩
+      if_then_else_ (rangeIsEmpty r2 || rangeIsEmpty r1) emptyRange (Rg (max l1 l2) (min u1 u2))
+     =⟨ cong (if_then_else_ (rangeIsEmpty r2 || rangeIsEmpty r1) emptyRange) 
+     (prop_range_creation (prop_max_sym l1 l2) (prop_min_sym u1 u2))  ⟩
+      if_then_else_ (rangeIsEmpty r2 || rangeIsEmpty r1) emptyRange (Rg (max l2 l1) (min u2 u1))
+     =⟨⟩
+      rangeIntersection r2 r1
+   end
+
+
 prop_singletonRangeHas : {{ o : Ord a }} -> {{ dio : DiscreteOrdered a}} -> (x : a) -> (rangeHas {{o}} (singletonRange x) x) ≡ true
 prop_singletonRangeHas {{o}} {{dio}} x = 
    begin

@@ -1,6 +1,7 @@
 module Haskell.RangedSetsProp.RangedSetProperties where
 
 open import Haskell.RangedSetsProp.library
+open import Haskell.RangedSetsProp.RangesProperties
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Bool
 
@@ -20,111 +21,72 @@ open import Haskell.RangedSets.Ranges
 open import Haskell.RangedSets.RangedSet
 
 
--- record List2 (A : Set) : Set where
---   constructor _∷_∷_
-
--- open List2
-
--- head1 : List2 a -> a 
--- head1 (aa ∷ b ∷ c) = aa
-
--- head2 : List2 a -> a 
--- head2 (aa ∷ b ∷ c) = b
-
 prop_empty : ⦃ o : Ord a ⦄ → ⦃ d : DiscreteOrdered a ⦄ → (v : a) 
-                          → (not (rSetEmpty -?- v)) ≡ true 
+                          → (not (rSetHas rSetEmpty {empty {{o}} {{d}}} v)) ≡ true 
 prop_empty v = refl
 
-prop_full : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (v : a) → (rSetFull -?- v) ≡ true
+prop_full : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (v : a) → (rSetHas rSetFull {full0 {{o}} {{dio}}} v) ≡ true
 prop_full v = refl
+
+prop_validNormalised : ⦃ o : Ord a ⦄ → ⦃ d : DiscreteOrdered a ⦄ → (ls : List (Range a)) 
+                      -> (validRangeList (normaliseRangeList ls)) ≡ true
+prop_validNormalised ⦃ o ⦄ ⦃ dio ⦄ [] = refl  
+prop_validNormalised ⦃ o ⦄ ⦃ dio ⦄ ls@(r1 ∷ rs) = 
+  begin 
+    (validRangeList (normaliseRangeList ls))
+  =⟨⟩  
+    (validRangeList (normalise (sort (filter (λ r → (rangeIsEmpty r) == false) ls)) ⦃ sortedList ls ⦄ ⦃ validRangesList ls ⦄))
+  =⟨ propIsTrue (validRangeList (normalise (sort (filter (λ r → (rangeIsEmpty r) == false) ls)) ⦃ sortedList ls ⦄ ⦃ validRangesList ls ⦄))
+    (normalisedSortedList (sort (filter (λ r → (rangeIsEmpty r) == false) ls)) (sortedList ls) (validRangesList ls)) ⟩ 
+    true 
+  end
 
 postulate
   rangeSetCreation : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RSet a) 
     -> {prf : IsTrue (validRangeList (rSetRanges rs))} -> (RS {{o}} {{dio}} (rSetRanges rs) {prf}) ≡ rs
   rangesEqiv : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
-    → (rs1 : RSet a) 
-    → (rs2 : RSet a) -> IsTrue (rSetRanges rs1 == rSetRanges rs2) -> rs1 ≡ rs2
-
--- postulate 
-
-
---     union0 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (r : Range a) -> (rs1 : RSet a) -> (rs2 : RSet a) 
---                              -> (r ∷ (rSetRanges (rs1 -\/- rs2))) ≡ (rSetRanges ((RS (r ∷ (rSetRanges rs1))) -\/- rs2))
-
-    -- unionIntersectionDistr : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) -> (rs2 : RSet a) -> (rs3 : RSet a)
-    --                          -> ((rs1 -/\- rs3) -\/- (rs2 -/\- rs3)) ≡ ((rs1 -\/- rs2) -/\- rs3)
- 
-    -- rangeSetAsUnion : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RSet a) -> ⦃ ne : NonEmpty (rSetRanges rs) ⦄
-                              -- -> rs ≡ ((RS ((head (rSetRanges rs) ⦃ ne ⦄) ∷ [])) -\/- (RS (tail (rSetRanges rs) ⦃ ne ⦄)))
- 
-
--- union0 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) -> (rs2 : RSet a) -> {{ ne : NonEmpty (rSetRanges rs1) }}
---   -> (rSetRanges (rs1 -\/- rs2)) ≡ ((head (rSetRanges rs1) {{ne}}) ∷ (rSetRanges ((RS (tail (rSetRanges rs1) {{ne}})) -\/- rs2)))
--- union0 {{o}} {{dio}} rs1@(RS ranges@(r1 ∷ rg1)) rs2@(RS []) {{ne}} = 
---   begin
---     (rSetRanges (rs1 -\/- rs2))
---   =⟨⟩
---     rSetRanges rs1 
---   =⟨⟩ 
---     (r1 ∷ rg1)
---   =⟨⟩ 
---     ((head ranges {{ne}}) ∷ (tail ranges {{ne}}))
---   =⟨⟩ 
---     ((head ranges {{ne}}) ∷ (rSetRanges (RS (tail ranges {{ne}}))))    
---   =⟨ cong ((head ranges {{ne}}) ∷_) (cong rSetRanges (sym (unionWithEmptySet (RS (tail ranges {{ne}}))))) ⟩ 
---     ((head (rSetRanges rs1) {{ne}}) ∷ (rSetRanges ((RS (tail (rSetRanges rs1) {{ne}})) -\/- (RS []))))
---    =⟨⟩ 
---     ((head (rSetRanges rs1) {{ne}}) ∷ (rSetRanges ((RS (tail (rSetRanges rs1) {{ne}})) -\/- rs2)))  
---   end   
--- union0 {{o}} {{dio}} rs1@(RS ranges@(r1 ∷ rg1)) rs2@(RS ranges2@(r2 ∷ rg2)) {{ne}} = 
---   begin
---     (rSetRanges (rs1 -\/- rs2))
---   =⟨⟩
---     ((head (rSetRanges rs1) {{ne}}) ∷ (rSetRanges (RS (tail (rSetRanges rs1) {{ne}}) -\/- rs2)))  
---     end
+    → {rs1 rs2 : RSet a} -> rSetRanges rs1 ≡ rSetRanges rs2 -> rs1 ≡ rs2
+  rangesEqiv2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
+    → {rs1 rs2 : List (Range a)} 
+    -> (prf1 : IsTrue (sortedRangeList rs1)) -> (prf2 : IsTrue (validRanges rs1))
+    -> (prf3 : IsTrue (sortedRangeList rs2)) -> (prf4 : IsTrue (validRanges rs2))
+    -> rs1 ≡ rs2 -> normalise rs1 ⦃ prf1 ⦄ ⦃ prf2 ⦄ ≡ normalise rs2 ⦃ prf3 ⦄ ⦃ prf4 ⦄ 
 
 singletonRangeSetHas : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (r : Range a) -> (v : a) 
   -> {prf : IsTrue (validRangeList (r ∷ []))}
-  -> (rSetHas (RS (r ∷ []) {prf}) v) ≡ rangeHas r v
+  -> (rSetHas (RS (r ∷ []) {prf}) {prf} v) ≡ rangeHas r v
 singletonRangeSetHas r v {prf} = 
   begin 
-    (rSetHas (RS (r ∷ []) {prf}) v)
+    (rSetHas (RS (r ∷ []) {prf}) {prf} v)
   =⟨⟩  
     rangeHas r v 
   end
 
+rSetHasHelper : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> a -> (rs : List (Range a)) -> {prf : IsTrue (validRangeList rs)} -> Bool
+rSetHasHelper {{o}} {{dio}} value rs {prf} = rSetHas {{o}} {{dio}} (RS rs {prf}) {prf} value
 
 -- rangeHasSym : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (r : Range a) -> (rs : RSet a) -> (v : a) 
---                              -> {prf1 : IsTrue }
---                              -> ((RS (r ∷ (rSetRanges rs))) -?- v) ≡ ((rangeHas r v) || (rs -?- v))
--- rangeHasSym r rs@(RS []) v = refl
--- rangeHasSym r rs@(RS ranges) v = 
+--                              -> {prf1 : IsTrue (validRangeList (r ∷ (rSetRanges rs)))}
+--                              -> (rSetHas (RS (r ∷ (rSetRanges rs)) {prf1}) {prf1} v) ≡ 
+--                                               ((rangeHas r v) || (rSetHas rs {headandtail (RS (r ∷ (rSetRanges rs)) {prf1}) prf1} v))
+-- rangeHasSym {{o}} {{dio}} r rs@(RS []) v {prf1} = 
 --   begin 
---     ((RS (r ∷ (rSetRanges rs))) -?- v)
+--     (rSetHas (RS (r ∷ []) {prf1}) {prf1} v)
 --   =⟨⟩
---     ((rangeHas r v) || ((RS (rSetRanges rs)) -?- v))
---   =⟨ cong ((rangeHas r v) ||_) (cong (_-?- v) (rangeSetCreation rs)) ⟩
---     ((rangeHas r v) || (rs -?- v))
+--     (rangeHas r v)
+--   =⟨ sym (prop_or_false2 (rangeHas r v)) ⟩
+--     ((rangeHas r v) || false)
+--   =⟨⟩
+--     ((rangeHas r v) || (rSetHas (RS [] {empty {{o}} {{dio}}}) {empty {{o}} {{dio}}} v))    
 --   end
-
-unionWithEmptySet : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) 
-  -> {prf : IsTrue (validRangeList (rSetRanges rs1))} 
-  -> (rSetUnion rs1 {prf} (RS [] {empty {{o}} {{dio}}}) {empty {{o}} {{dio}}}) ≡ rs1
-unionWithEmptySet {{o}} {{dio}} rs1@(RS []) {prf} = 
-  begin 
-    rSetUnion rs1 {prf} (RS {{o}} {{dio}} [] {empty {{o}} {{dio}}}) {empty {{o}} {{dio}}}
-  =⟨⟩  
-    RS []
-  =⟨ rangesEqiv {{o}} {{dio}} (RS []) rs1 (eq00 {{o}} {{dio}} {[]} {[]} refl) ⟩  
-    rs1    
-  end  
-unionWithEmptySet {{o}} {{dio}} rs1@(RS ranges@(h ∷ t)) {prf} = 
-  begin 
-    rSetUnion rs1 {prf} (RS {{o}} {{dio}} [] {empty {{o}} {{dio}}}) {empty {{o}} {{dio}}}
-  =⟨⟩  
-    rs1
-  end
-
+-- rangeHasSym {{o}} {{d}} r rs@(RS ranges@(r1 ∷ r2) {prf}) v {prf1} = 
+--   begin 
+--     ((RS (r ∷ (rSetRanges rs)) {prf1}) -?- v)
+--   =⟨⟩
+--     ((rangeHas r v) || (rSetHas (RS (rSetRanges rs) {headandtail (RS (r ∷ (rSetRanges rs)) {prf1}) prf1}) v))
+--   =⟨ cong ((rangeHas r v) ||_) (cong (rSetHasHelper v) (rangesEqiv refl)) ⟩
+--     ((rangeHas r v) || (rSetHas rs v))
+--   end
 
 
 postulate
@@ -1145,54 +1107,61 @@ prop_strictSubset {{o}} {{dio}} rs {prf} =
    =⟨⟩    
      false   
    end 
--- prop_union : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) → (rs2 : RSet a) → (v : a) → (rs1 -?- v || rs2 -?- v) ≡  ((rs1 -\/- rs2) -?- v)
--- prop_union {{o}} {{dio}} rs1@(RS []) rs2@(RS []) v = 
+
+-- prop_union : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) → (rs2 : RSet a) 
+--                         -> {prf1 : IsTrue (validRangeList (rSetRanges rs1))} -> {prf2 : IsTrue (validRangeList (rSetRanges rs2))} 
+--                         -> (v : a) → (rSetHas rs1 {prf1} v || rSetHas rs2 {prf2} v) ≡ 
+--                         (rSetHas (rSetUnion rs1 {prf1} rs2 {prf2}) {union2 rs1 rs2 prf1 prf2 (unionn rs1 rs2 prf1 prf2)} v)
+-- prop_union {{o}} {{dio}} rs1@(RS []) rs2@(RS []) {prf1} {prf2} v = 
 --    begin
---     ((rs1 -?- v) || (rs2 -?- v))
+--     (rSetHas rs1 {prf1} v || rSetHas rs2 {prf2} v)
 --    =⟨⟩
 --     (false || false)
 --    =⟨⟩
 --      false
 --    =⟨⟩
---      ((RS []) -?- v) 
+--      (rSetHas (RS [] {empty {{o}} {{dio}}}) {empty {{o}} {{dio}}} v) 
 --    =⟨⟩
---      ((rSetUnion rs1 rs2) -?- v)      
+--      (rSetHas (rSetUnion rs1 {prf1} rs2 {prf2}) {unionn rs1 rs2 prf1 prf2} v)     
 --    end 
--- prop_union {{o}} {{dio}} rs1@(RS []) rs2@(RS rg1@(r1 ∷ rss1)) v = 
+-- prop_union {{o}} {{dio}} rs1@(RS []) rs2@(RS rg1@(r1 ∷ rss1)) {prf1} {prf2} v = 
 --    begin
---     ((rs1 -?- v) || (rs2 -?- v))
+--     (rSetHas rs1 {prf1} v || rSetHas rs2 {prf2} v)
 --    =⟨⟩
---     (false || (rs2 -?- v))
+--     (false || rSetHas rs2 {prf2} v)
 --    =⟨⟩
---      (rs2 -?- v)
+--      rSetHas rs2 {prf2} v
 --    =⟨⟩
---      ((rSetUnion rs1 rs2) -?- v) 
+--      (rSetHas (rSetUnion rs1 {prf1} rs2 {prf2}) {unionn rs1 rs2 prf1 prf2} v)  
 --    end 
--- prop_union {{o}} {{dio}} rs1@(RS rg@(r1 ∷ rss1)) rs2@(RS []) v = 
+-- prop_union {{o}} {{dio}} rs1@(RS rg@(r1 ∷ rss1)) rs2@(RS []) {prf1} {prf2} v = 
 --    begin
---     ((rs1 -?- v) || (rs2 -?- v))
+--     (rSetHas rs1 {prf1} v || rSetHas rs2 {prf2} v)
 --    =⟨⟩
---     ((rs1 -?- v) || false)
---    =⟨ prop_or_false2 (rs1 -?- v) ⟩
---      (rs1 -?- v)
+--     (rSetHas rs1 {prf1} v || false)
+--    =⟨ prop_or_false2 (rSetHas rs1 {prf1} v) ⟩
+--      (rSetHas rs1 {prf1} v)
 --    =⟨⟩
---      ((rSetUnion rs1 rs2) -?- v) 
+--      (rSetHas (rSetUnion rs1 {prf1} rs2 {prf2}) {unionn rs1 rs2 prf1 prf2} v)  
 --    end    
--- prop_union {{o}} {{dio}} rs1@(RS rg1@(r1 ∷ rss1)) rs2@(RS rg2@(r2 ∷ rss2)) v = 
+-- prop_union {{o}} {{dio}} rs1@(RS rg1@(r1 ∷ rss1)) rs2@(RS rg2@(r2 ∷ rss2)) {prf1} {prf2} v = 
 --    begin
---     ((rs1 -?- v) || (rs2 -?- v))
---    =⟨⟩
---     (((rangeHas r1 v) || (rSetHas (RS rss1) v)) || (rs2 -?- v))
---    =⟨ prop_or_assoc (rangeHas r1 v) (rSetHas (RS rss1) v)  (rs2 -?- v) ⟩
---      ((rangeHas r1 v) || (rSetHas (RS rss1) v) || (rs2 -?- v))
---    =⟨ cong ((rangeHas r1 v) ||_) (prop_union (RS rss1) rs2 v) ⟩
---      ((rangeHas r1 v) || (((RS rss1) -\/- rs2) -?- v)) 
---    =⟨ sym (rangeHasSym r1 ((RS rss1) -\/- rs2) v) ⟩
+--     (rSetHas rs1 {prf1} v || rSetHas rs2 {prf2} v)
+--    =⟨ cong (_|| (rSetHas rs2 {prf2} v)) (rangeHasSym r1 (RS rss1 {headandtail rs1 prf1}) v {prf1}) ⟩
+--     (((rangeHas r1 v) || (rSetHas (RS rss1 {headandtail rs1 prf1}) {headandtail rs1 prf1} v)) || (rSetHas rs2 {prf2} v))
+--    =⟨ prop_or_assoc (rangeHas r1 v) (rSetHas (RS rss1 {headandtail rs1 prf1}) {headandtail rs1 prf1} v)  (rSetHas rs2 {prf2} v) ⟩
+--      ((rangeHas r1 v) || (rSetHas (RS rss1 {headandtail rs1 prf1}) {headandtail rs1 prf1} v) || (rSetHas rs2 {prf2} v))
+--    =⟨ cong ((rangeHas r1 v) ||_) (prop_union (RS rss1) rs2  {headandtail rs1 prf1} {prf2} v) ⟩
+--      ((rangeHas r1 v) ||
+--       (rSetHas (rSetUnion (RS rss1) {headandtail rs1 prf1} rs2 {prf2})
+--        {(union2 (RS rss1) rs2 (headandtail rs1 prf1) prf2 (unionn (RS rss1) rs2 (headandtail rs1 prf1) prf2))} v))
+--    =⟨ sym (rangeHasSym r1 (rSetUnion (RS rss1) {headandtail rs1 prf1} rs2 {prf2}) v 
+--     {union2 (RS rss1) rs2 (headandtail rs1 prf1) prf2 (unionn (RS rss1) rs2 (headandtail rs1 prf1) prf2)}) ⟩
 --      RS (r1 ∷ (rSetRanges ((RS rss1) -\/- rs2))) -?- v
 --    =⟨ cong (_-?- v) (cong RS (union0 r1 (RS rss1) rs2)) ⟩       
 --      RS (rSetRanges ((RS (r1 ∷ rss1)) -\/- rs2)) -?- v
 --    =⟨ cong (_-?- v) (sym (rangeSetCreation ((RS (r1 ∷ rss1)) -\/- rs2))) ⟩
---      ((rs1 -\/- rs2) -?- v)    
+--      (rSetHas (rSetUnion rs1 {prf1} rs2 {prf2}) {union2 rs1 rs2 prf1 prf2 (unionn rs1 rs2 prf1 prf2)} v)   
 --    end
 
 -- prop_union_has_sym : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
@@ -1241,170 +1210,151 @@ prop_emptyRange {{o}} {{dio}} r@(Rg l u) =
     l <= u
   end 
 
-prop_validNormalisedSingleton1 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ -> (r : Range a) 
-              -> {{ re : IsTrue (not (rangeIsEmpty r)) }}
-              → validRangeList {{o}} {{dio}} (normaliseRangeList {{o}} {{dio}} (r ∷ [])) ≡ true
-prop_validNormalisedSingleton1 {{o}} {{dio}} r {{re}} = 
+
+
+postulate 
+  -- these postulates hold when r1 == r2 does not hold, used for easing the proofs for union/intersection commutes
+  equalityRanges : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ -> (r1 : Range a) -> (r2 : Range a)
+                  -> (r1 < r2) ≡ (not (r2 < r1))                               
+  equalityRanges2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ -> (r1 : Range a) -> (r2 : Range a)
+                  -> (rangeUpper r1 < rangeUpper r2) ≡ (not (rangeUpper r2 < rangeUpper r1))
+
+prop_sym_merge1' :  ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : List (Range a)) -> (rs2 : List (Range a))
+  -> {{ne1 : NonEmpty rs1}} -> {{ne2 : NonEmpty rs2}} -> (b : Bool)
+  -> if_then_else_ b ((head rs1 {{ne1}}) ∷ (merge1 (tail rs1 {{ne1}}) rs2)) ((head rs2 {{ne2}}) ∷ (merge1 rs1 (tail rs2 {{ne2}}))) ≡
+      if_then_else_ (not b) ((head rs2 {{ne2}}) ∷ (merge1 (tail rs2 {{ne2}}) rs1)) ((head rs1 {{ne1}}) ∷ (merge1 rs2 (tail rs1 {{ne1}})))
+
+prop_sym_merge1 :  ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : List (Range a)) -> (rs2 : List (Range a))
+                  -> merge1 rs1 rs2 ≡ merge1 rs2 rs1 
+prop_sym_merge1 {{o}} {{dio}} [] [] = refl 
+prop_sym_merge1 {{o}} {{dio}} ms1@(h1 ∷ t1) [] = refl                 
+prop_sym_merge1 {{o}} {{dio}} [] ms2@(h2 ∷ t2) = refl 
+prop_sym_merge1 {{o}} {{dio}} ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) = 
   begin 
-    validRangeList {{o}} {{dio}} (normaliseRangeList {{o}} {{dio}} (r ∷ [])) 
-  =⟨⟩ 
-    validRangeList {{o}} {{dio}} (normalise (sort (filter (λ x -> (rangeIsEmpty x) == false) (r ∷ []))))
-  =⟨⟩
-    validRangeList {{o}} {{dio}} (normalise (sort (if ((rangeIsEmpty r) == false) then (r ∷ (filter (λ x -> (rangeIsEmpty x) == false) [])) else (filter (λ x -> (rangeIsEmpty x) == false) []))))
-  =⟨ cong validRangeList (cong normalise (cong sort (propIf2 ((rangeIsEmpty r) == false) (truth2 re)))) ⟩
-    validRangeList {{o}} {{dio}} (normalise (sort (r ∷ (filter (λ x -> (rangeIsEmpty x) == false) []))))
-  =⟨⟩  
-    validRangeList {{o}} {{dio}} (normalise (sort (r ∷ [])))
-  =⟨⟩
-    validRangeList {{o}} {{dio}} (normalise (r ∷ []))
-  =⟨⟩  
-    validRangeList {{o}} {{dio}} (r ∷ [])
-  =⟨⟩    
-    (rangeLower r) <= (rangeUpper r)   
-  =⟨ truth (prop_emptyRange r) {{re}} ⟩    
-    true 
+    merge1 ms1 ms2 
+   =⟨⟩
+    if_then_else_ (h1 < h2) (h1 ∷ (merge1 t1 ms2)) (h2 ∷ (merge1 ms1 t2)) 
+   =⟨ prop_sym_merge1' {{o}} {{dio}} ms1 ms2 (h1 < h2) ⟩
+    if_then_else_ (not (h1 < h2)) (h2 ∷ (merge1 t2 ms1)) (h1 ∷ (merge1 ms2 t1)) 
+   =⟨ cong (ifThenElseHelper (h2 ∷ (merge1 t2 ms1)) (h1 ∷ (merge1 ms2 t1))) (sym (equalityRanges h2 h1)) ⟩    
+    if_then_else_ (h2 < h1) (h2 ∷ (merge1 t2 ms1)) (h1 ∷ (merge1 ms2 t1)) 
+   =⟨⟩
+    merge1 ms2 ms1
   end  
 
-prop_validNormalisedSingleton2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ -> (r : Range a) 
-              -> {{ re : IsFalse ((rangeIsEmpty r) == false) }}
-              → validRangeList {{o}} {{dio}} (normaliseRangeList {{o}} {{dio}} (r ∷ [])) ≡ true
-prop_validNormalisedSingleton2 {{o}} {{dio}} r {{re}} = 
+
+prop_sym_merge1' {{o}} {{dio}} ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) true = 
   begin 
-    validRangeList {{o}} {{dio}} (normaliseRangeList {{o}} {{dio}} (r ∷ [])) 
-  =⟨⟩ 
-    validRangeList {{o}} {{dio}} (normalise (sort (filter (λ x -> (rangeIsEmpty x) == false) (r ∷ []))))
-  =⟨⟩
-    validRangeList {{o}} {{dio}} (normalise (sort (if ((rangeIsEmpty r) == false) then (r ∷ (filter (λ x -> (rangeIsEmpty x) == false) [])) else (filter (λ x -> (rangeIsEmpty x) == false) []))))
-  =⟨ cong validRangeList (cong normalise (cong sort (propIf3 ((rangeIsEmpty r) == false) re))) ⟩
-    validRangeList {{o}} {{dio}} (normalise (sort (filter (λ x -> (rangeIsEmpty x) == false) [])))
-  =⟨⟩  
-    validRangeList {{o}} {{dio}} (normalise (sort []))
-  =⟨⟩
-    validRangeList {{o}} {{dio}} (normalise [])
-  =⟨⟩  
-    validRangeList {{o}} {{dio}} []
-  =⟨⟩     
-    true 
+    if_then_else_ true (h1 ∷ (merge1 t1 ms2)) (h2 ∷ (merge1 ms1 t2))
+   =⟨⟩
+    (h1 ∷ (merge1 t1 ms2)) 
+   =⟨ cong (h1 ∷_) (prop_sym_merge1 {{o}} {{dio}} t1 ms2) ⟩
+    (h1 ∷ (merge1 ms2 t1))   
+   =⟨⟩  
+    if_then_else_ false (h2 ∷ (merge1 t2 ms1)) (h1 ∷ (merge1 ms2 t1))  
   end  
+prop_sym_merge1' {{o}} {{dio}} ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) false = 
+  begin 
+    if_then_else_ false (h1 ∷ (merge1 t1 ms2)) (h2 ∷ (merge1 ms1 t2))
+   =⟨⟩
+    (h2 ∷ (merge1 ms1 t2)) 
+   =⟨ cong (h2 ∷_) (prop_sym_merge1 {{o}} {{dio}} ms1 t2) ⟩
+    (h2 ∷ (merge1 t2 ms1))   
+   =⟨⟩  
+    if_then_else_ true (h2 ∷ (merge1 t2 ms1)) (h1 ∷ (merge1 ms2 t1))  
+  end 
 
--- -- prop_union_commutes : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) -> (rs2 : RSet a) -> (rs1 -\/- rs2) ≡ (rs2 -\/- rs1)
--- -- prop_union_commutes (RS []) (RS []) = refl
--- -- prop_union_commutes (RS ranges@(r ∷ rs)) (RS []) = refl
--- -- prop_union_commutes (RS []) (RS ranges@(r ∷ rs)) = refl
--- -- prop_union_commutes RS1@(RS ranges1@(r1 ∷ rs1)) RS2@(RS ranges2@(r2 ∷ rs2)) = refl
+prop_sym_sortedRangeList : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (ls1 ls2 : List (Range a))
+                          -> (sortedRangeList (merge1 ls1 ls2)) ≡ (sortedRangeList (merge1 ls2 ls1))
+prop_sym_sortedRangeList {{ o }} {{ dio }} ls1 ls2 =  (cong sortedRangeList (prop_sym_merge1 ls1 ls2))
 
--- -- prop_difference : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) → (rs2 : RSet a) → (v : a) 
--- --                     -> (rs1 -?- v && not (rs2 -?- v)) ≡ ((rs1 -!- rs2) -?- v)
--- -- prop_difference {{o}} {{dio}} rs1@(RS rg1@(r1 ∷ rss1)) rs2@(RS rg2@(r2 ∷ rss2)) v =
--- --    begin
--- --     (rs1 -?- v && not (rs2 -?- v))
--- --    =⟨⟩
--- --     (((rangeHas r1 v) || (rSetHas (RS rss1) v)) && not (rs2 -?- v))
--- --    =⟨ prop_distr (rangeHas r1 v) (rSetHas (RS rss1) v)  (not (rs2 -?- v)) ⟩
--- --      (((rangeHas r1 v) && not (rs2 -?- v)) || ((rSetHas (RS rss1) v) && not (rs2 -?- v)))
--- --    =⟨ cong (((rangeHas r1 v) && not (rs2 -?- v)) ||_) (prop_difference (RS rss1) rs2 v) ⟩
--- --      (((rangeHas r1 v) && not (rs2 -?- v)) || (((RS rss1) -!- rs2) -?- v)) 
-   
--- --    =⟨ rangeHasSym r1 ((RS rss1) -\/- rs2) v ⟩
--- --      RS (r1 ∷ (rSetRanges ((RS rss1) -\/- rs2))) -?- v
--- --    =⟨ cong (_-?- v) (cong RS (union0 r1 (RS rss1) rs2)) ⟩       
--- --      RS (rSetRanges ((RS (r1 ∷ rss1)) -\/- rs2)) -?- v
--- --    =⟨ cong (_-?- v) (sym (rangeSetCreation ((RS (r1 ∷ rss1)) -\/- rs2))) ⟩
--- --      ((rs1 -\/- rs2) -?- v)    
--- --    end
+prop_sym_validRanges : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (ls1 ls2 : List (Range a))
+                          ->  (validRanges (merge1 ls1 ls2)) ≡  (validRanges (merge1 ls2 ls1))
+prop_sym_validRanges {{ o }} {{ dio }} ls1 ls2 =  (cong validRanges (prop_sym_merge1 ls1 ls2))
 
--- -- prop_intersection : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) -> (rs2 : RSet a) -> (v : a) 
--- --                     → (rs1 -?- v && rs2 -?- v) ≡  ((rs1 -/\- rs2) -?- v)
--- -- prop_intersection {{o}} {{dio}} rs1@(RS rgs@(h ∷ t)) rs2@(RS []) v = 
--- --    begin
--- --     ((rs1 -?- v) && (rs2 -?- v))
--- --    =⟨⟩
--- --     ((rs1 -?- v) && false) 
--- --    =⟨ prop_and_false (rs1 -?- v) ⟩
--- --     false
--- --    =⟨⟩
--- --     ((RS []) -?- v)
--- --    =⟨⟩
--- --     ((rs1 -/\- rs2) -?- v) 
--- --    end      
+prop_union_commutes : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) -> (rs2 : RSet a) 
+                      -> {prf1 : IsTrue (validRangeList (rSetRanges rs1))} -> {prf2 : IsTrue (validRangeList (rSetRanges rs2))} 
+                      -> (rSetUnion rs1 {prf1} rs2 {prf2}) ≡ (rSetUnion rs2 {prf2} rs1 {prf1})
+prop_union_commutes (RS []) (RS []) = refl
+prop_union_commutes (RS ranges@(r ∷ rs)) (RS []) = refl
+prop_union_commutes (RS []) (RS ranges@(r ∷ rs)) = refl
+prop_union_commutes {{o}} {{dio}} RS1@(RS ls1@(r1 ∷ rs1)) RS2@(RS ls2@(r2 ∷ rs2)) {prf1} {prf2} =
+  begin 
+    (rSetUnion RS1 {prf1} RS2 {prf2}) 
+   =⟨⟩
+    RS {{o}} {{dio}} (normalise {{o}} {{dio}} (merge1 {{o}} {{dio}} ls1 ls2) ⦃ merge1Sorted RS1 RS2 prf1 prf2 ⦄ 
+    ⦃ merge1HasValidRanges RS1 RS2 prf1 prf2 ⦄) {unionHolds RS1 RS2 prf1 prf2}
+   =⟨ rangesEqiv (rangesEqiv2 (merge1Sorted RS1 RS2 prf1 prf2) (merge1HasValidRanges RS1 RS2 prf1 prf2)
+     (merge1Sorted RS2 RS1 prf2 prf1) (merge1HasValidRanges RS2 RS1 prf2 prf1) (prop_sym_merge1 ls1 ls2))  ⟩
+    RS {{o}} {{dio}} (normalise {{o}} {{dio}} (merge1 {{o}} {{dio}} ls2 ls1) ⦃ merge1Sorted RS2 RS1 prf2 prf1 ⦄ 
+    ⦃ merge1HasValidRanges RS2 RS1 prf2 prf1 ⦄) {unionHolds RS2 RS1 prf2 prf1}
+  =⟨⟩
+   (rSetUnion RS2 {prf2} RS1 {prf1})
+     end
 
--- -- prop_intersection {{o}} {{dio}} rs1@(RS []) rs2@(RS rgs@(h ∷ t)) v = 
--- --    begin
--- --     ((rs1 -?- v) && (rs2 -?- v))
--- --    =⟨⟩
--- --     (false && (rs2 -?- v)) 
--- --    =⟨⟩
--- --     false 
--- --    =⟨⟩
--- --     ((RS []) -?- v)
--- --    =⟨⟩
--- --     ((rs1 -/\- rs2) -?- v) 
--- --    end       
--- -- prop_intersection {{o}} {{dio}} rs1@(RS []) rs2@(RS []) v = 
--- --    begin
--- --     ((rs1 -?- v) && (rs2 -?- v))
--- --    =⟨⟩
--- --     (false && (rs2 -?- v)) 
--- --    =⟨⟩
--- --     false 
--- --    =⟨⟩
--- --     ((RS []) -?- v)
--- --    =⟨⟩
--- --     ((rs1 -/\- rs2) -?- v) 
--- --    end    
--- -- prop_intersection {{o}} {{dio}} rs1@(RS rg1@(r1 ∷ rss1)) rs2@(RS rg2@(r2 ∷ rss2)) v = 
--- --    begin
--- --     ((rs1 -?- v) && (rs2 -?- v))
--- --    =⟨⟩
--- --     (((rangeHas r1 v) || (rSetHas (RS rss1) v)) && (rs2 -?- v))
--- --    =⟨ prop_distr (rangeHas r1 v) (rSetHas (RS rss1) v)  (rs2 -?- v) ⟩
--- --      (((rangeHas r1 v) && (rs2 -?- v)) || ((rSetHas (RS rss1) v) && (rs2 -?- v)))
--- --    =⟨ cong (((rangeHas r1 v) && (rs2 -?- v)) ||_) (prop_intersection (RS rss1) rs2 v) ⟩
--- --      (((rangeHas r1 v) && (rs2 -?- v)) || (((RS rss1) -/\- rs2) -?- v)) 
--- --    =⟨ cong (_|| (((RS rss1) -/\- rs2) -?- v)) (cong (_&& (rs2 -?- v)) (sym (singletonRangeSetHas r1 v))) ⟩
--- --      ((((RS (r1 ∷ [])) -?- v) && (rs2 -?- v)) || (((RS rss1) -/\- rs2) -?- v))
--- --    =⟨ cong (_|| (((RS rss1) -/\- rs2) -?- v)) (prop_intersection (RS (r1 ∷ [])) rs2 v) ⟩       
--- --      ((((RS (r1 ∷ [])) -/\- rs2) -?- v) || (((RS rss1) -/\- rs2) -?- v))
--- --    =⟨ prop_union ((RS (r1 ∷ [])) -/\- rs2) ((RS rss1) -/\- rs2) v ⟩
--- --      ((((RS (r1 ∷ [])) -/\- rs2) -\/- ((RS rss1) -/\- rs2)) -?- v)  
--- --    =⟨ cong (_-?- v) (unionIntersectionDistr (RS (r1 ∷ [])) (RS rss1) rs2) ⟩
--- --      ((((RS (r1 ∷ [])) -\/- (RS rss1)) -/\- rs2) -?- v) 
--- --    =⟨ cong (_-?- v) (cong (_-/\- rs2) (sym (rangeSetAsUnion rs1))) ⟩
--- --      ((rs1 -/\- rs2) -?- v)       
--- --    end
+prop_sym_merge2 :  ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : List (Range a)) -> (rs2 : List (Range a))
+                  -> merge2 rs1 rs2 ≡ merge2 rs2 rs1 
 
+prop_sym_merge2' :  ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : List (Range a)) -> (rs2 : List (Range a))
+  -> {{ne1 : NonEmpty rs1}} -> {{ne2 : NonEmpty rs2}} -> (b : Bool)
+  -> (if_then_else_ b (merge2 (tail rs1 {{ne1}}) rs2) (merge2 rs1 (tail rs2 {{ne2}}))) ≡
+      (if_then_else_ (not b) (merge2 (tail rs2 {{ne2}}) rs1) (merge2 rs2 (tail rs1 {{ne1}})))
+prop_sym_merge2' {{o}} {{dio}} ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) true = 
+  begin 
+    (if_then_else_ true (merge2 t1 ms2) (merge2 ms1 t2)) 
+  =⟨⟩  
+   (merge2 t1 ms2)
+  =⟨ prop_sym_merge2 t1 ms2 ⟩
+   (merge2 ms2 t1)
+  =⟨⟩
+   if_then_else_ false (merge2 t2 ms1) (merge2 ms2 t1)
+  end  
+prop_sym_merge2' {{o}} {{dio}} ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) false = 
+  begin 
+    (if_then_else_ false (merge2 t1 ms2) (merge2 ms1 t2)) 
+  =⟨⟩  
+   (merge2 ms1 t2)
+  =⟨ prop_sym_merge2 ms1 t2 ⟩
+   (merge2 t2 ms1)
+  =⟨⟩
+   if_then_else_ true (merge2 t2 ms1) (merge2 ms2 t1)
+     end  
 
--- -- prop_subset : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RSet a) → (rs -<=- rs) ≡ true
--- -- prop_subset rs = refl
+prop_sym_merge2 {{o}} {{dio}} [] [] = refl 
+prop_sym_merge2 {{o}} {{dio}} ms1@(h1 ∷ t1) [] = refl                 
+prop_sym_merge2 {{o}} {{dio}} [] ms2@(h2 ∷ t2) = refl 
+prop_sym_merge2 {{o}} {{dio}} ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) = 
+  begin 
+    merge2 ms1 ms2 
+   =⟨⟩
+    (rangeIntersection h1 h2) ∷ (if_then_else_ (rangeUpper h1 < rangeUpper h2) (merge2 t1 ms2) (merge2 ms1 t2)) 
+   =⟨ cong ((rangeIntersection h1 h2) ∷_) (prop_sym_merge2' {{o}} {{dio}} ms1 ms2 (rangeUpper h1 < rangeUpper h2)) ⟩
+    (rangeIntersection h1 h2) ∷ (if_then_else_ (not (rangeUpper h1 < rangeUpper h2)) (merge2 t2 ms1) (merge2 ms2 t1))  
+   =⟨ cong ((rangeIntersection h1 h2) ∷_) (cong (ifThenElseHelper (merge2 t2 ms1) (merge2 ms2 t1)) (sym (equalityRanges2 h2 h1))) ⟩    
+    ((rangeIntersection h1 h2) ∷ (if_then_else_ (rangeUpper h2 < rangeUpper h1) (merge2 t2 ms1) (merge2 ms2 t1))) 
+   =⟨ cong (_∷ (if_then_else_ (rangeUpper h2 < rangeUpper h1) (merge2 t2 ms1) (merge2 ms2 t1))) (prop_intersection_sym h1 h2) ⟩    
+    ((rangeIntersection h2 h1) ∷ (if_then_else_ (rangeUpper h2 < rangeUpper h1) (merge2 t2 ms1) (merge2 ms2 t1))) 
+   =⟨⟩
+    merge2 ms2 ms1
+  end 
 
--- -- prop_not_empty : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RSet a) -> (v : a) -> ((rs -?- v) ≡ true) -> not (rSetIsEmpty rs) ≡ true
--- -- prop_not_empty rs v = 
--- --    begin
--- --     (rs -?- v)
--- --    =⟨⟩
-
--- --    =⟨⟩  
-   
--- --    =⟨⟩
-
--- --    =⟨⟩
-
--- --    =⟨⟩     
--- --    end
-
--- -- prop_empty_intersection : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (rs : RSet a) -> rSetIsEmpty (rs -/\- rSetNegation rs) ≡ true
--- -- prop_empty_intersection rs = refl
-
--- -- prop_validNormalised : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (rg : List (Range a)) -> validRangeList (normaliseRangeList {{o}} {{dio}} rg) ≡ true
--- -- prop_validNormalised {{o}} {{dio}} ls = 
--- --    begin
--- --       validRangeList (normaliseRangeList rg)
--- --      =⟨⟩ 
--- --       (rangeHas (Rg (BoundaryBelow v1) (BoundaryAbove v1)) v2)
--- --      =⟨⟩
--- --       ((v2 />/ (BoundaryBelow v1)) && (not (v2 />/ (BoundaryAbove v1))))
--- --      =⟨⟩
--- --       ((v2 >= v1) && (not (v2 > v1)))
--- --      =⟨ eq1 v2 v1 ⟩
--- --       true
--- --    end
+prop_intersection_commutes : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) -> (rs2 : RSet a) 
+                      -> {prf1 : IsTrue (validRangeList (rSetRanges rs1))} -> {prf2 : IsTrue (validRangeList (rSetRanges rs2))} 
+                      -> (rSetIntersection rs1 {prf1} rs2 {prf2}) ≡ (rSetIntersection rs2 {prf2} rs1 {prf1})
+prop_intersection_commutes (RS []) (RS []) = refl
+prop_intersection_commutes (RS ranges@(r ∷ rs)) (RS []) = refl
+prop_intersection_commutes (RS []) (RS ranges@(r ∷ rs)) = refl
+prop_intersection_commutes {{o}} {{dio}} rs1@(RS ls1@(r1 ∷ rss1)) rs2@(RS ls2@(r2 ∷ rss2)) {prf1} {prf2} =
+  begin 
+    (rSetIntersection rs1 {prf1} rs2 {prf2}) 
+   =⟨⟩
+    RS {{o}} {{dio}} 
+      (filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 {{o}} {{dio}} ls1 ls2)) 
+         {intersection0 rs1 rs2 prf1 prf2}
+   =⟨ rangesEqiv (cong (filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false)) (prop_sym_merge2 ls1 ls2)) ⟩
+     RS {{o}} {{dio}} 
+      (filter (λ x -> rangeIsEmpty {{o}} {{dio}} x == false) (merge2 {{o}} {{dio}} ls2 ls1)) 
+         {intersection0 rs2 rs1 prf2 prf1}
+  =⟨⟩
+   (rSetIntersection rs2 {prf2} rs1 {prf1})
+     end

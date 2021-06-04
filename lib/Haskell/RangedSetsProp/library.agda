@@ -42,6 +42,9 @@ infix   3  _end
 infixr  2  _=⟨_⟩_
 infixr  2  _=⟨⟩_
 
+ifThenElseHelper :  {a : Set ℓ} → a → a → Bool → a
+ifThenElseHelper b c d = if_then_else_ d b c 
+
 propIf : {a b : Set} -> {x y : a} (f : a -> b) (c : Bool) -> f (if c then x else y) ≡ (if c then f x else f y)
 propIf f false = refl
 propIf f true = refl
@@ -64,19 +67,14 @@ propIsFalse false f = refl
 propIsTrue : (x : Bool) -> IsTrue x -> x ≡ true 
 propIsTrue true f = refl
 
-
 postulate 
    truth : ∀ {x y : Bool} -> (x ≡ y) -> {{IsTrue x}} -> y ≡ true
    truth2 : ∀ {x : Bool} -> IsTrue (not x) -> IsTrue (x == false)
    gteq : {{o : Ord a}} -> ∀ {x y : a} -> (x ≡ y) -> (_>=_ {{o}} x y) ≡ true
-
    lt : {{o : Ord a}} -> (x y : a) -> (x ≡ y) -> IsFalse (_>_ {{o}} x y) 
-
    lteq : {{o : Ord a}} -> (x y : a) -> (_<_ {{o}} x y) ≡ (_<=_ {{o}} x y)
    gt : {{o : Ord a}} -> ∀ {x y : a} -> (x ≡ y) -> not (_>_ {{o}} x y) ≡ true
-
    eq4 : {{o : Ord a}} -> ∀ {x y : a} -> (x ≡ y) -> ((compare x y) == EQ) ≡ true
-
    eq5 : {{o : Ord a}} -> ∀ {x y : a} -> (x ≡ y) -> IsTrue ((compare x y) == EQ)
    eq : (x : Bool) -> IsFalse x ≡ IsTrue (not x)
    eq00 : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> ∀ {x y : (List (Range a))} -> (x ≡ y) -> IsTrue (x == y)
@@ -84,6 +82,7 @@ postulate
    eq1 : {{o : Ord a}} -> (x y : a) -> ((_>=_ {{o}} x y) && (not (_>_ {{o}} x y))) ≡ (y == x)
    eq2 : {{o : Ord a}} -> (x y : a) -> not (_<=_ {{o}} x y) ≡ (_<_ {{o}} y x)
    eq3 : {{o : Ord a}} -> (x y i j : a) -> {{IsTrue ((_<_ {{o}} i x) && (_<_ {{o}} j y))}} -> ((min {{o}} x y) <= (max {{o}} i j)) ≡ ((_<=_ {{o}} x j) || (_<=_ {{o}} y i))
+  
    boundaries0 : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (x : a) -> (b c : Boundary a) -> ((x />/ b) && (x />/ c)) ≡ (x />/ (max b c))
    boundaries1 : {{o : Ord a}} -> {{dio : DiscreteOrdered a}} -> (x : a) -> (b c : Boundary a) -> ((x />/ b) || (x />/ c)) ≡ (x />/ (min b c))
 

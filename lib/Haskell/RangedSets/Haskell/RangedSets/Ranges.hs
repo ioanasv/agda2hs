@@ -157,3 +157,7 @@ showHelper2 r
       if rangeIsFull r then "All x" else
         showHelper r (rangeSingletonValue r)
 
+instance (Show a, Ord a, DiscreteOrdered a) => Show (Range a) where
+    showsPrec _ = showString . showHelper2
+    showList = defaultShowList (showString . showHelper2)
+
