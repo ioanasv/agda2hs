@@ -18,6 +18,7 @@ open import Haskell.Prim.Real
 open import Haskell.RangedSets.Boundaries
 open import Haskell.RangedSets.Ranges
 open import Haskell.RangedSetsProp.library
+open import Haskell.RangedSetsProp.BoundariesProperties
 
 {-# FOREIGN AGDA2HS
 import Haskell.RangedSets.Boundaries
@@ -101,11 +102,6 @@ unsafeRangedSet rs ⦃ prf ⦄  = RS rs {prf}
 
 {-# COMPILE AGDA2HS unsafeRangedSet #-}
 
--- validFunction3 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → {x : Boundary a} → (f : Boundary a → Boundary a) → Bool
--- validFunction3 {x = b@(BoundaryBelow y)} f = (f b) > b
--- validFunction3 {x = b@(BoundaryAbove y)} f = (f b) > b
--- validFunction3 {x = b@(BoundaryBelowAll)} f = (f b) > b
--- validFunction3 {x = b@(BoundaryAboveAll)} f = (f b) > b
 
 validFunction2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (b : Boundary a) → (f : Boundary a → Boundary a) → Bool
 validFunction2 b f = (f b) > b
@@ -157,12 +153,14 @@ merge1 [] ms2@(h2 ∷ t2) = ms2
 merge1 ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) = if_then_else_ (h1 < h2) (h1 ∷ (merge1 t1 ms2)) (h2 ∷ (merge1 ms1 t2))
 {-# COMPILE AGDA2HS merge1 #-}
 
-merge2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → List (Range a) → List (Range a) → List (Range a)
+merge2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
+   → List (Range a) → List (Range a) → List (Range a)
 merge2 [] [] = []
 merge2 ms1@(h1 ∷ t1) [] = []
 merge2 [] ms2@(h2 ∷ t2) = []
 merge2 ms1@(h1 ∷ t1) ms2@(h2 ∷ t2) = 
-   (rangeIntersection h1 h2) ∷ (if_then_else_ (rangeUpper h1 < rangeUpper h2) (merge2 t1 ms2) (merge2 ms1 t2))
+   (rangeIntersection h1 h2) ∷ 
+   (if_then_else_ (rangeUpper h1 < rangeUpper h2) (merge2 t1 ms2) (merge2 ms1 t2))
 {-# COMPILE AGDA2HS merge2 #-}
 
 postulate
@@ -226,8 +224,6 @@ normalise (r1 ∷ r2 ∷ rs) ⦃ prf ⦄ ⦃ prf2 ⦄ =
 normalise rs = rs
 {-# COMPILE AGDA2HS normalise #-}
 
-subst : {A : Set} {x y : A} → (P : A → Set) → x ≡ y → P x → P y
-subst P refl p = p
 
 -- some useful proofs
 headandtail : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RSet a) 
@@ -244,8 +240,7 @@ tailandhead : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RS
 tailandhead2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : List (Range a)) 
       → ⦃ ne : NonEmpty rs ⦄ → (IsTrue (validRangeList rs)) 
       → (IsTrue (validRangeList ((head rs ⦃ ne ⦄) ∷ [])))      
-BoundaryBelowAllSmaller :  ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (b : Boundary a)
-      → (BoundaryBelowAll <= b) ≡ true
+
 
 okAdjIsTrue :  ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (r : Range a) → (r2 : Range a)
                → okAdjacent r r2 ≡ ((rangeLower r <= rangeUpper r) && (rangeUpper r <= rangeLower r2) && (rangeLower r2 <= rangeUpper r2))
@@ -324,8 +319,6 @@ ranges2HasValidRanges : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄
                           → IsTrue (validRanges (ranges2 b f g)) 
                        
 
-isTrue&&₁ : {x y : Bool} → IsTrue (x && y) → IsTrue x
-isTrue&&₂ : {x y : Bool} → IsTrue (x && y) → IsTrue y
 
 unfoldSorted : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (b : Boundary a) 
             → (f : Boundary a → Boundary a) 
@@ -385,7 +378,8 @@ intersectionHolds : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (r
 -- intersection of two valid ranged sets is also valid range set
 intersection0 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 : RSet a) → (rs2 : RSet a)
       → IsTrue (validRangeList (rSetRanges rs1)) → IsTrue (validRangeList (rSetRanges rs2))
-      → IsTrue (validRangeList (filter (λ x → (rangeIsEmpty x == false)) (merge2 (rSetRanges rs1) (rSetRanges rs2))))
+      → IsTrue (validRangeList (filter (λ x → (rangeIsEmpty x == false)) 
+                  (merge2 (rSetRanges rs1) (rSetRanges rs2))))
 intersection0 ⦃ o ⦄ ⦃ dio ⦄ rs1 rs2 prf1 prf2 = subst IsTrue (sym (intersectionHolds ⦃ o ⦄ ⦃ dio ⦄ rs1 rs2 prf1 prf2)) IsTrue.itsTrue
 
 -- used for proving that union is valid (merge1 returns a valid range list)
@@ -469,12 +463,16 @@ rSingleton : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → a → RSe
 rSingleton ⦃ o ⦄ ⦃ dio ⦄ a = RS ((singletonRange a) ∷ []) {singletonRangeValid a}
 {-# COMPILE AGDA2HS rSingleton #-}
 
-normaliseRangeList : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → List (Range a) → List (Range a)
+normaliseRangeList : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
+   → List (Range a) → List (Range a)
 normaliseRangeList [] = []
-normaliseRangeList rs@(r1 ∷ rss) = normalise (sort (filter (λ r → (rangeIsEmpty r) == false) rs)) ⦃ sortedList rs ⦄ ⦃ validRangesList rs ⦄
+normaliseRangeList rs@(r1 ∷ rss) = 
+   normalise (sort (filter (λ r → (rangeIsEmpty r) == false) rs)) 
+      ⦃ sortedList rs ⦄ ⦃ validRangesList rs ⦄
 {-# COMPILE AGDA2HS normaliseRangeList #-}
 
-makeRangedSet : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → List (Range a) → RSet a
+makeRangedSet : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
+   → List (Range a) → RSet a
 makeRangedSet ⦃ o ⦄ ⦃ dio ⦄ [] = RS [] {empty ⦃ o ⦄ ⦃ dio ⦄}
 makeRangedSet ⦃ o ⦄ ⦃ dio ⦄ rs@(r1 ∷ rss) = RS (normaliseRangeList rs) 
    { normalisedSortedList (sort (filter (λ r → (rangeIsEmpty r) == false) rs)) (sortedList rs) (validRangesList rs) }
@@ -651,13 +649,7 @@ rSetUnfold ⦃ o ⦄ ⦃ dio ⦄ bound upperFunc succFunc ⦃ fValid ⦄ ⦃ gVa
 {-# COMPILE AGDA2HS rSetUnfold #-}
 
 okAdjIsTrue ⦃ o ⦄ ⦃ dio ⦄ r@(Rg l1 u1) r2@(Rg l2 u2) = refl 
--- normaliseValidList ⦃ o ⦄ ⦃ dio ⦄ ranges prf ⦃ prf2 ⦄ = subst IsTrue (sym (normaliseValidList0 ranges prf)) IsTrue.itsTrue
 
-isTrue&&₁ {true} _ = IsTrue.itsTrue
-isTrue&&₁ {false} ()
-
-isTrue&&₂ {true} p = p
-isTrue&&₂ {false} ()
 
 headandtailSorted rs@(r ∷ []) prf = IsTrue.itsTrue
 headandtailSorted rs@(r ∷ rss@(r2 ∷ rsss)) prf = isTrue&&₂ {r <= r2} prf
@@ -1177,13 +1169,6 @@ intersectionHolds ⦃ o ⦄ ⦃ dio ⦄ rs1@(RS ranges1@(r1 ∷ rss1)) rs2@(RS r
    =⟨ intersection2 ⦃ o ⦄ ⦃ dio ⦄ rs1 rs2 prf1 prf2 (rangeIsEmpty (rangeIntersection r1 r2) == false) ⟩
      true    
    end
-
-   
-BoundaryBelowAllSmaller BoundaryBelowAll = refl
-BoundaryBelowAllSmaller BoundaryAboveAll = refl
-BoundaryBelowAllSmaller (BoundaryBelow _) = refl
-BoundaryBelowAllSmaller (BoundaryAbove _)  = refl
-
 
 validRanges1 ⦃ o ⦄ ⦃ dio ⦄ [] = 
    begin 

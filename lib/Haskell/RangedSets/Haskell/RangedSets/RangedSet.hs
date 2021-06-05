@@ -9,7 +9,9 @@ import Data.List
 okAdjacent ::
              Ord a => DiscreteOrdered a => Range a -> Range a -> Bool
 okAdjacent (Rg lower1 upper1) (Rg lower2 upper2)
-  = lower1 <= upper1 && upper1 <= lower2 && lower2 <= upper2
+  = rangeLower (Rg lower1 upper1) <= rangeUpper (Rg lower1 upper1) &&
+      rangeUpper (Rg lower1 upper1) <= rangeLower (Rg lower2 upper2) &&
+        rangeLower (Rg lower2 upper2) <= rangeUpper (Rg lower2 upper2)
 
 validRangeList :: Ord a => DiscreteOrdered a => [Range a] -> Bool
 validRangeList [] = True
@@ -34,13 +36,6 @@ normalise (r1 : (r2 : rs))
       else r1 : normalise (r2 : rs)
 normalise rs = rs
 
-normaliseRangeList ::
-                     Ord a => DiscreteOrdered a => [Range a] -> [Range a]
-normaliseRangeList [] = []
-normaliseRangeList (r1 : rss)
-  = normalise
-      (sort (filter (\ r -> rangeIsEmpty r == False) (r1 : rss)))
-
 unsafeRangedSet ::
                   Ord a => DiscreteOrdered a => [Range a] -> RSet a
 unsafeRangedSet rs = RS rs
@@ -52,7 +47,8 @@ ranges3 ::
               (Boundary a -> Boundary a) ->
                 (Boundary a -> Maybe (Boundary a)) -> [Range a]
 ranges3 (Just b1) upperFunc succFunc
-  = ranges2 b1 upperFunc succFunc
+  = if validFunction2 b1 upperFunc && validFunction b1 succFunc then
+      ranges2 b1 upperFunc succFunc else []
 ranges3 Nothing _ _ = []
 
 ranges2 ::
@@ -71,7 +67,7 @@ setBounds1 xs = BoundaryBelowAll : xs
 
 bounds1 :: Ord a => DiscreteOrdered a => [Range a] -> [Boundary a]
 bounds1 (r : rs) = rangeLower r : (rangeUpper r : bounds1 rs)
-bounds1 _ = []
+bounds1 [] = []
 
 ranges1 :: Ord a => DiscreteOrdered a => [Boundary a] -> [Range a]
 ranges1 (b1 : (b2 : bs)) = Rg b1 b2 : ranges1 bs
@@ -101,6 +97,17 @@ merge2 (h1 : t1) (h3 : t2)
 rSingleton :: Ord a => DiscreteOrdered a => a -> RSet a
 rSingleton a = RS [singletonRange a]
 
+normaliseRangeList ::
+                     Ord a => DiscreteOrdered a => [Range a] -> [Range a]
+normaliseRangeList [] = []
+normaliseRangeList (r1 : rss)
+  = normalise
+      (sort (filter (\ r -> rangeIsEmpty r == False) (r1 : rss)))
+
+makeRangedSet :: Ord a => DiscreteOrdered a => [Range a] -> RSet a
+makeRangedSet [] = RS []
+makeRangedSet (r1 : rss) = RS (normaliseRangeList (r1 : rss))
+
 rangesAreEmpty :: Ord a => DiscreteOrdered a => [Range a] -> Bool
 rangesAreEmpty [] = True
 rangesAreEmpty (r : rs) = rangeIsEmpty r && rangesAreEmpty rs
@@ -125,18 +132,14 @@ rSetHas :: Ord a => DiscreteOrdered a => RSet a -> a -> Bool
 rSetHas (RS []) _ = False
 rSetHas (RS [r]) value = rangeHas r value
 rSetHas (RS (r : rs)) value
-  = foldMap id $ map (\ r -> rangeHas r value) (r : rs)
+  = rangeHas r value || rSetHas (RS rs) value
 
 (-?-) :: Ord a => DiscreteOrdered a => RSet a -> a -> Bool
 (-?-) rs = rSetHas rs
 
 rSetUnion ::
             Ord a => DiscreteOrdered a => RSet a -> RSet a -> RSet a
-rSetUnion (RS []) (RS (h₁ : t)) = RS (h₁ : t)
-rSetUnion (RS (h₁ : t)) (RS []) = RS (h₁ : t)
-rSetUnion (RS []) (RS []) = RS []
-rSetUnion (RS (r0 : rs1)) (RS (r : rs2))
-  = RS (normalise (merge1 (r0 : rs1) (r : rs2)))
+rSetUnion (RS ls1) (RS ls2) = RS (normalise (merge1 ls1 ls2))
 
 (-\/-) :: Ord a => DiscreteOrdered a => RSet a -> RSet a -> RSet a
 rs1 -\/- rs2 = rSetUnion rs1 rs2
