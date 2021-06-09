@@ -103,8 +103,6 @@ postulate
   orderedBoundaries3 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (b1 b2 : Boundary a)
             → IsTrue (b1 < b2)               
          
-
-
 {-# TERMINATING #-}
 lemma0 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RSet a) 
     → {prf : IsTrue (validRangeList (rSetRanges rs))}
@@ -1198,18 +1196,6 @@ prop_validNormalisedEmpty ⦃ o ⦄ ⦃ dio ⦄ =
     true 
   end  
 
-prop_emptyRange : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (r : Range a) → not (rangeIsEmpty r) ≡ (rangeLower r <= rangeUpper r)
-prop_emptyRange ⦃ o ⦄ ⦃ dio ⦄ r@(Rg l u) = 
-  begin 
-    not (rangeIsEmpty r) 
-  =⟨⟩ 
-    not (u <= l)
-  =⟨ eq2 u l ⟩
-    l < u
-  =⟨ lteq l u ⟩
-    l <= u
-  end 
-
 
 
 postulate 
@@ -1358,3 +1344,73 @@ prop_intersection_commutes ⦃ o ⦄ ⦃ dio ⦄ rs1@(RS ls1@(r1 ∷ rss1)) rs2@
   =⟨⟩
    (rSetIntersection rs2 {prf2} rs1 {prf1})
      end
+
+-- if x is strict subset of y, y is not strict subset of x 
+-- prop_subset_not1 asserts that rSetIsSubstrict x y is true 
+-- this means that rSetIsEmpty (rSetDifference x y) is true 
+-- and rSetEmpty (rSetDifference x y) is false
+prop_subset_not1 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 rs2 : RSet a)
+  → {prf1 : IsTrue (validRangeList (rSetRanges rs1))}
+  → {prf2 : IsTrue (validRangeList (rSetRanges rs2))} 
+  -> (a1 : IsTrue (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) 
+  -> (a2 : IsTrue (not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))))
+  → (rSetIsSubsetStrict rs1 {prf1} rs2 {prf2}) ≡ (not (rSetIsSubsetStrict rs2 {prf2} rs1 {prf1})) 
+prop_subset_not1 {{ o }} {{ dio }} rs1 rs2 {prf1} {prf2} a1 a2 = 
+  begin 
+    rSetIsSubsetStrict rs1 {prf1} rs2 {prf2}
+  =⟨⟩
+   (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}) && not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))
+  =⟨ not-not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}) && not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))) ⟩  
+    not (not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}) && not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))))
+  =⟨ cong not (prop_demorgan (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})) (not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))) ⟩
+    not ((not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) || (not (not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))))
+  =⟨ cong not (cong ((not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) ||_) (sym (not-not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))))) ⟩  
+    not ((not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) || (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))
+  =⟨ cong not (prop_or_sym (not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))) ⟩    
+    not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}) || not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})))
+  =⟨ cong not (prop_or_and_eqiv_false (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})) 
+    (not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})))
+    (isTrueAndIsFalse2 a2)
+    (isTrueAndIsFalse1 a1)) ⟩
+   not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}) && not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})))
+  =⟨⟩
+   not (rSetIsSubsetStrict rs2 {prf2} rs1 {prf1})
+ end
+
+-- if x is strict subset of y, y is not strict subset of x 
+-- prop_subset_not2 asserts that rSetIsSubstrict x y is false 
+-- this means that rSetIsEmpty (rSetDifference x y) is false 
+-- and rSetEmpty (rSetDifference x y) is true
+prop_subset_not2 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 rs2 : RSet a)
+  → {prf1 : IsTrue (validRangeList (rSetRanges rs1))}
+  → {prf2 : IsTrue (validRangeList (rSetRanges rs2))} 
+  -> (a1 : IsFalse (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) 
+  -> (a2 : IsFalse (not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))))
+  → (rSetIsSubsetStrict rs1 {prf1} rs2 {prf2}) ≡ (not (rSetIsSubsetStrict rs2 {prf2} rs1 {prf1})) 
+prop_subset_not2 {{ o }} {{ dio }} rs1 rs2 {prf1} {prf2} a1 a2 = 
+  begin 
+    rSetIsSubsetStrict rs1 {prf1} rs2 {prf2}
+  =⟨⟩
+   (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}) && not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))
+  =⟨ not-not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}) && not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))) ⟩  
+    not (not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}) && not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))))
+  =⟨ cong not (prop_demorgan (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})) (not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))) ⟩
+    not ((not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) || (not (not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))))
+  =⟨ cong not (cong ((not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) ||_) (sym (not-not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))))) ⟩  
+    not ((not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) || (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})))
+  =⟨ cong not (prop_or_sym (not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2}))) (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}))) ⟩    
+    not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}) || not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})))
+  =⟨ cong not (prop_or_and_eqiv_true (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1})) 
+    (not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})))
+    (isTrueAndIsFalse3 a2)
+    (isTrueAndIsFalse4 a1)) ⟩
+   not (rSetIsEmpty (rSetDifference rs2 {prf2} rs1 {prf1}) && not (rSetIsEmpty (rSetDifference rs1 {prf1} rs2 {prf2})))
+  =⟨⟩
+   not (rSetIsSubsetStrict rs2 {prf2} rs1 {prf1})
+ end 
+
+prop_strictSubset_means_subset : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs1 rs2 : RSet a)
+  → {prf1 : IsTrue (validRangeList (rSetRanges rs1))}
+  → {prf2 : IsTrue (validRangeList (rSetRanges rs2))} 
+  → IsTrue (rSetIsSubsetStrict rs1 {prf1} rs2 {prf2}) -> IsTrue (rSetIsSubset rs1 {prf1} rs2 {prf2})
+prop_strictSubset_means_subset {{ o }} {{ dio }} rs1 rs2 {prf1} {prf2} prf = isTrue&&₁ {(rSetIsSubset rs1 {prf1} rs2 {prf2})} prf

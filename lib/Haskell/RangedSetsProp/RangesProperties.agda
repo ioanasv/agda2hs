@@ -230,6 +230,17 @@ prop_UnionRange1 ⦃ ord ⦄ ⦃ diso ⦄ r1@(Rg l1 u1) r2@(Rg l2 u2) ⦃ ne1 �
 --      ((rangeHas r1 n) || (rangeHas r2 n))
 --    end
 
+prop_emptyRange : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (r : Range a) → not (rangeIsEmpty r) ≡ (rangeLower r <= rangeUpper r)
+prop_emptyRange ⦃ o ⦄ ⦃ dio ⦄ r@(Rg l u) = 
+  begin 
+    not (rangeIsEmpty r) 
+  =⟨⟩ 
+    not (u <= l)
+  =⟨ eq2 u l ⟩
+    l < u
+  =⟨ lteq l u ⟩
+    l <= u
+  end 
 
 prop_rangeHas : ⦃ ord : Ord a ⦄ → ⦃ diso : DiscreteOrdered a ⦄ → {r : (Range a)} → {n : a} 
                         → (rangeHas1 ⦃ ord ⦄ n r) ≡ (rangeHas ⦃ ord ⦄ r n)

@@ -50,10 +50,8 @@ validBoundaryList [] = true
 validBoundaryList (x ∷ []) = true
 validBoundaryList (x ∷ rs@(r1 ∷ rss)) = (x <= r1) && (validBoundaryList rs)
 
-data RSet (a : Set) ⦃ o : Ord a ⦄ 
-      ⦃ dio : DiscreteOrdered a ⦄ : Set where
-    RS :  (rg : List (Range a)) 
-      → {IsTrue (validRangeList rg)} → RSet a
+data RSet (a : Set) ⦃ o : Ord a ⦄ ⦃ dio : DiscreteOrdered a ⦄ : Set where
+    RS : (rg : List (Range a)) → {IsTrue (validRangeList rg)} → RSet a
 
 {-# COMPILE AGDA2HS RSet #-}
 
@@ -81,8 +79,7 @@ headandtailValidRanges : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ �
       → ⦃ ne : NonEmpty rs ⦄ → (IsTrue (validRanges rs)) 
       → (IsTrue (validRanges (tail rs ⦃ ne ⦄)))
 
-normalise : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
-   → (rg : List (Range a)) 
+normalise : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rg : List (Range a)) 
    → ⦃ IsTrue (sortedRangeList rg) ⦄ 
    → ⦃ IsTrue (validRanges rg) ⦄
    → List (Range a)
@@ -126,8 +123,8 @@ ranges3 Nothing _ _ = []
 {-# COMPILE AGDA2HS ranges2 #-}
 {-# COMPILE AGDA2HS ranges3 #-}
 
-setBounds1 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
-            → (xs : List (Boundary a)) → List (Boundary a)
+setBounds1 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (xs : List (Boundary a)) 
+   → List (Boundary a)
 setBounds1 (BoundaryBelowAll ∷ xs) = xs 
 setBounds1 xs = (BoundaryBelowAll ∷ xs)
 {-# COMPILE AGDA2HS setBounds1 #-}
@@ -138,8 +135,8 @@ bounds1 (r ∷ rs) = (rangeLower r) ∷ (rangeUpper r) ∷ (bounds1 rs)
 bounds1 [] = []
 {-# COMPILE AGDA2HS bounds1 #-}
 
-ranges1 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
-         → List (Boundary a) → List (Range a)
+ranges1 : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → List (Boundary a) 
+   → List (Range a)
 ranges1 (b1 ∷ b2 ∷ bs) = (Rg b1 b2) ∷ (ranges1 bs)
 ranges1 (BoundaryAboveAll ∷ [])  = []
 ranges1 (b ∷ []) = (Rg b BoundaryAboveAll) ∷ []
@@ -480,7 +477,7 @@ makeRangedSet ⦃ o ⦄ ⦃ dio ⦄ rs@(r1 ∷ rss) = RS (normaliseRangeList rs)
 
 rangesAreEmpty : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → List (Range a) → Bool
 rangesAreEmpty [] = true 
-rangesAreEmpty (r ∷ rs) = (rangeIsEmpty r) && (rangesAreEmpty rs)
+rangesAreEmpty (r ∷ rs) = false
 {-# COMPILE AGDA2HS rangesAreEmpty #-}
 
 rSetIsEmpty : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → (rs : RSet a) → Bool

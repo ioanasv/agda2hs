@@ -169,8 +169,7 @@ instance
     isDiscreteOrderedQuadtruple . adjacentBelow (x1 ∷ x2 ∷ x3 ∷ x4 ∷ []) = constructQuadtruple x1 x2 x3 (adjacentBelow x4)
 {-# COMPILE AGDA2HS isDiscreteOrderedQuadtruple #-}
 
-data Boundary (a : Set) ⦃ b : Ord a ⦄ 
-        ⦃ _ : DiscreteOrdered a ⦃ b ⦄ ⦄ : Set where
+data Boundary (a : Set) ⦃ b : Ord a ⦄ ⦃ _ : DiscreteOrdered a ⦃ b ⦄ ⦄ : Set where
     BoundaryAbove    : a → Boundary a
     BoundaryBelow    : a → Boundary a
     BoundaryAboveAll : Boundary a
@@ -178,7 +177,8 @@ data Boundary (a : Set) ⦃ b : Ord a ⦄
 
 {-# COMPILE AGDA2HS Boundary #-}
 
-above : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → Boundary a ⦃ o ⦄ → a → Bool
+above : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
+        → Boundary a ⦃ o ⦄ → a → Bool
 above (BoundaryAbove b) a    = a > b
 above (BoundaryBelow b) a    = a >= b
 above BoundaryAboveAll _     = false
@@ -186,7 +186,8 @@ above BoundaryBelowAll _     = true
 {-# COMPILE AGDA2HS above #-}
 
 infixr 4 _/>/_
-_/>/_ : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ → a → Boundary a ⦃ o ⦄ → Bool
+_/>/_ : ⦃ o : Ord a ⦄ → ⦃ dio : DiscreteOrdered a ⦄ 
+    → a → Boundary a ⦃ o ⦄ → Bool
 _/>/_ x (BoundaryAbove b) = x > b
 _/>/_ x (BoundaryBelow b) = x >= b
 _/>/_ _ BoundaryAboveAll = false

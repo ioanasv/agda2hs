@@ -80,7 +80,18 @@ propIsFalse false f = refl
 propIsTrue : (x : Bool) → IsTrue x → x ≡ true 
 propIsTrue true f = refl
 
+prop_or_and_eqiv_true : (x y : Bool) -> IsTrue x -> IsTrue y -> (x || y) ≡ (x && y)
+prop_or_and_eqiv_true true true _ _ = refl
+
+prop_or_and_eqiv_false : (x y : Bool) -> IsFalse x -> IsFalse y -> (x || y) ≡ (x && y)
+prop_or_and_eqiv_false false false _ _ = refl
+
+
 postulate 
+   isTrueAndIsFalse1 : {b : Bool} -> IsTrue b -> IsFalse (not b) 
+   isTrueAndIsFalse2 : {b : Bool} -> IsTrue (not b) -> IsFalse b
+   isTrueAndIsFalse3 : {b : Bool} -> IsFalse (not b) -> IsTrue b
+   isTrueAndIsFalse4 : {b : Bool} -> IsFalse b -> IsTrue (not b) 
    gteq : ⦃ o : Ord a ⦄ → ∀ {x y : a} → (x ≡ y) → (_>=_ ⦃ o ⦄ x y) ≡ true
    lt : ⦃ o : Ord a ⦄ → (x y : a) → (x ≡ y) → IsFalse (_>_ ⦃ o ⦄ x y) 
    lteq : ⦃ o : Ord a ⦄ → (x y : a) → (_<_ ⦃ o ⦄ x y) ≡ (_<=_ ⦃ o ⦄ x y)
@@ -208,7 +219,6 @@ prop_demorgan true b = refl
 
 not-not : (b : Bool) → b ≡ not (not b)
 not-not false = refl
-
 not-not true =
    begin
       not (not true)

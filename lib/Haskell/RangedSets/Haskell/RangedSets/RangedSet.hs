@@ -110,7 +110,7 @@ makeRangedSet (r1 : rss) = RS (normaliseRangeList (r1 : rss))
 
 rangesAreEmpty :: Ord a => DiscreteOrdered a => [Range a] -> Bool
 rangesAreEmpty [] = True
-rangesAreEmpty (r : rs) = rangeIsEmpty r && rangesAreEmpty rs
+rangesAreEmpty (r : rs) = False
 
 rSetIsEmpty :: Ord a => DiscreteOrdered a => RSet a -> Bool
 rSetIsEmpty (RS ranges) = rangesAreEmpty ranges
